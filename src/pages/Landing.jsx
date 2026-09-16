@@ -8,6 +8,7 @@ import {
   CheckCircle2, ChevronRight, Shield, Zap, Eye
 } from 'lucide-react';
 import Button from '../components/common/Button';
+import FarmerRobotCanvas from '../components/3d/FarmerRobotCanvas';
 
 const FEATURES = [
   { icon: Users, title: 'Smart Queue', desc: 'Live token tracking and farmer count with real-time updates.' },
@@ -261,18 +262,8 @@ export default function Landing() {
                 ))}
               </div>
             </div>
-            <div className="flex justify-center">
-              <div className="w-72 h-80 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex flex-col items-center justify-center p-6">
-                <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mb-4">
-                  <Bot className="w-10 h-10 text-white" />
-                </div>
-                <p className="text-center text-primary-100 text-sm italic">
-                  "வணக்கம்! இன்று உங்களுக்கு எப்படி உதவலாம்?"
-                </p>
-                <p className="text-center text-primary-200 text-xs mt-2">
-                  Hello! How can I help you today?
-                </p>
-              </div>
+            <div className="w-full max-w-md mx-auto">
+              <FarmerRobotCanvas className="w-full h-[360px]" />
             </div>
           </div>
         </div>
