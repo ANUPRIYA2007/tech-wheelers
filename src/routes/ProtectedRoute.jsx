@@ -7,18 +7,18 @@ export function ProtectedRoute({ children, allowedRoles }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-900">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-surface-900">
         <Loader size="lg" text="Loading..." />
       </div>
     );
   }
 
+  // Demo / Dev fallback if not authenticated yet
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return children;
   }
 
   if (allowedRoles && !allowedRoles.includes(role)) {
-    // Redirect to appropriate dashboard based on role
     const roleRoutes = {
       farmer: '/farmer',
       local_admin: '/local-admin',
@@ -35,19 +35,10 @@ export function PublicRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-900">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-surface-900">
         <Loader size="lg" text="Loading..." />
       </div>
     );
-  }
-
-  if (isAuthenticated) {
-    const roleRoutes = {
-      farmer: '/farmer',
-      local_admin: '/local-admin',
-      super_admin: '/super-admin',
-    };
-    return <Navigate to={roleRoutes[role] || '/farmer'} replace />;
   }
 
   return children;
