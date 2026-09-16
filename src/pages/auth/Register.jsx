@@ -48,7 +48,6 @@ export default function Register() {
         if (form.password !== form.confirmPassword) { highlightField('confirmPassword'); setError('Passwords do not match.'); return false; }
         return true;
       case 1:
-        if (!form.farmerId.trim()) { highlightField('farmerId'); setError('Farmer ID is required.'); return false; }
         if (!form.village.trim()) { highlightField('village'); setError('Village is required.'); return false; }
         if (!form.district.trim()) { highlightField('district'); setError('District is required.'); return false; }
         if (!form.state.trim()) { highlightField('state'); setError('State is required.'); return false; }
@@ -189,9 +188,9 @@ export default function Register() {
 
             {step === 1 && (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('farmerId')} *</label>
-                  <input id="farmerId" type="text" value={form.farmerId} onChange={e => updateField('farmerId', e.target.value)} placeholder="Enter your Farmer ID" className={inputClass} />
+                <div className="p-3.5 rounded-xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-xs text-primary-700 dark:text-primary-300 flex items-center justify-between">
+                  <span>Farmer ID will be auto-generated for you upon registration</span>
+                  <span className="font-mono font-bold bg-primary-100 dark:bg-primary-800 px-2 py-0.5 rounded text-[11px]">AUTO-GEN</span>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('village')} *</label>
@@ -255,7 +254,7 @@ export default function Register() {
                     [t('fullName'), form.fullName],
                     [t('phone'), form.phone],
                     [t('email'), form.email],
-                    [t('farmerId'), form.farmerId],
+                    [t('farmerId'), 'Auto-assigned upon registration (e.g. FRM-2026-XXXX)'],
                     [t('village'), form.village],
                     [t('district'), form.district],
                     [t('state'), form.state],
@@ -263,7 +262,7 @@ export default function Register() {
                   ].map(([label, val], i) => (
                     <div key={i} className="flex justify-between py-2 border-b border-surface-100 dark:border-surface-700">
                       <span className="text-surface-500 dark:text-surface-400">{label}</span>
-                      <span className="font-medium text-surface-900 dark:text-white">{val || '—'}</span>
+                      <span className="font-medium text-surface-900 dark:text-white text-right max-w-[220px]">{val || '—'}</span>
                     </div>
                   ))}
                 </div>

@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
 import AppRoutes from './routes/AppRoutes';
+import HeroChatbot from './components/common/HeroChatbot';
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
         <LanguageProvider>
           <AuthProvider>
             <AppRoutes />
+            <HeroChatbot />
           </AuthProvider>
         </LanguageProvider>
       </ThemeProvider>
