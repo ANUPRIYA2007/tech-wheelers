@@ -1,0 +1,185 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   CROP DAIRY — Design System
+   ============================================ */
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #F8FAFC;
+    color: #17202A;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .dark body {
+    background-color: #0F172A;
+    color: #E2E8F0;
+  }
+}
+
+@layer components {
+  /* Card System */
+  .card {
+    @apply bg-white rounded-xl border border-surface-200 shadow-card
+           transition-all duration-200 ease-out;
+  }
+  .card:hover {
+    @apply shadow-card-hover;
+  }
+  .dark .card {
+    @apply bg-surface-800 border-surface-700;
+  }
+
+  /* Button System */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5
+           font-medium rounded-lg transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed
+           text-sm;
+  }
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700
+           focus:ring-primary-500 active:bg-primary-800;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-surface-700 border border-surface-300
+           hover:bg-surface-50 focus:ring-primary-500;
+  }
+  .dark .btn-secondary {
+    @apply bg-surface-800 text-surface-200 border-surface-600
+           hover:bg-surface-700;
+  }
+  .btn-ghost {
+    @apply btn text-surface-600 hover:bg-surface-100 focus:ring-primary-500;
+  }
+  .dark .btn-ghost {
+    @apply text-surface-400 hover:bg-surface-800;
+  }
+  .btn-danger {
+    @apply btn bg-error text-white hover:bg-red-700
+           focus:ring-red-500;
+  }
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  /* Form Inputs */
+  .input {
+    @apply w-full px-4 py-2.5 rounded-lg border border-surface-300
+           bg-white text-surface-900 placeholder-surface-400
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+           transition-colors duration-200 text-sm;
+  }
+  .dark .input {
+    @apply bg-surface-800 border-surface-600 text-surface-100
+           placeholder-surface-500;
+  }
+  .input-error {
+    @apply border-error focus:ring-error;
+  }
+
+  /* Badge System */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full
+           text-xs font-medium;
+  }
+  .badge-success {
+    @apply badge bg-primary-100 text-primary-800;
+  }
+  .dark .badge-success {
+    @apply bg-primary-900/30 text-primary-400;
+  }
+  .badge-warning {
+    @apply badge bg-amber-100 text-amber-800;
+  }
+  .dark .badge-warning {
+    @apply bg-amber-900/30 text-amber-400;
+  }
+  .badge-error {
+    @apply badge bg-red-100 text-red-800;
+  }
+  .dark .badge-error {
+    @apply bg-red-900/30 text-red-400;
+  }
+  .badge-info {
+    @apply badge bg-sky-100 text-sky-800;
+  }
+  .dark .badge-info {
+    @apply bg-sky-900/30 text-sky-400;
+  }
+  .badge-neutral {
+    @apply badge bg-surface-100 text-surface-700;
+  }
+  .dark .badge-neutral {
+    @apply bg-surface-700 text-surface-300;
+  }
+
+  /* Status Indicator */
+  .status-dot {
+    @apply w-2 h-2 rounded-full inline-block;
+  }
+  .status-dot-active {
+    @apply status-dot bg-primary-500 animate-pulse-soft;
+  }
+  .status-dot-inactive {
+    @apply status-dot bg-surface-300;
+  }
+  .status-dot-warning {
+    @apply status-dot bg-warning;
+  }
+  .status-dot-error {
+    @apply status-dot bg-error;
+  }
+
+  /* Skeleton Loading */
+  .skeleton {
+    @apply bg-surface-200 rounded animate-pulse;
+  }
+  .dark .skeleton {
+    @apply bg-surface-700;
+  }
+
+  /* Page Title */
+  .page-title {
+    @apply text-2xl font-bold text-surface-900;
+  }
+  .dark .page-title {
+    @apply text-surface-100;
+  }
+  .page-subtitle {
+    @apply text-sm text-surface-500 mt-1;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
