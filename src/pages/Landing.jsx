@@ -104,14 +104,14 @@ export default function Landing() {
               smart arrival recommendations, procurement status tracking and payment updates.
             </p>
             <div className="hero-actions opacity-0 mt-8 flex flex-wrap gap-4">
-              <Link to="/register">
+              <Link to="/portal">
                 <Button size="lg">
-                  {t('getStarted')} <ArrowRight className="w-4 h-4" />
+                  {t('getStarted', 'Get Started')} <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
               <a href="#how-it-works">
                 <Button variant="secondary" size="lg">
-                  {t('seeHowItWorks')}
+                  {t('seeHowItWorks', 'See How It Works')}
                 </Button>
               </a>
             </div>
@@ -300,9 +300,9 @@ export default function Landing() {
             Join Crop Dairy and take control of your procurement journey.
           </p>
           <div className="mt-8">
-            <Link to="/register">
+            <Link to="/portal">
               <Button size="lg">
-                {t('getStarted')} <ArrowRight className="w-4 h-4" />
+                {t('getStarted', 'Get Started')} <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
           </div>

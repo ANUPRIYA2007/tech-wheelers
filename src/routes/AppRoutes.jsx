@@ -41,8 +41,9 @@ export default function AppRoutes() {
       <Route path="/" element={<Splash />} />
       <Route path="/splash" element={<Splash />} />
       <Route path="/portal" element={<PortalSelection />} />
-      <Route path="/landing" element={<Landing />} />
+      <Route path="/landing" element={<Navigate to="/portal" replace />} />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/super-admin/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
       <Route path="/registration-success" element={<RegistrationSuccess />} />
 

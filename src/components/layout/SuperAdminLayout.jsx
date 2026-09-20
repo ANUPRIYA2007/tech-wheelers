@@ -40,7 +40,7 @@ export default function SuperAdminLayout() {
           <button onClick={toggleDarkMode} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700/50 w-full">
             {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}{t('darkMode')}
           </button>
-          <button onClick={async () => { await signOut(); navigate('/landing', { replace: true }); }} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 w-full">
+          <button onClick={async () => { await signOut(); navigate('/portal', { replace: true }); }} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 w-full">
             <LogOut className="w-5 h-5" />{t('logout')}
           </button>
         </div>

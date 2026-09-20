@@ -6,8 +6,7 @@ import {
   Sprout, 
   UserCheck, 
   Building2, 
-  ShieldCheck, 
-  Globe
+  ShieldCheck 
 } from 'lucide-react';
 import HeroAssistant from '../components/hero/HeroAssistant';
 import HeroChatbot from '../components/common/HeroChatbot';
@@ -15,7 +14,7 @@ import LanguageSelector from '../components/common/LanguageSelector';
 
 export default function PortalSelection() {
   const navigate = useNavigate();
-  const { t, language, changeLanguage, languages } = useLanguage();
+  const { t } = useLanguage();
 
   const headerRef = useRef(null);
   const cardsRef = useRef([]);
@@ -143,7 +142,7 @@ export default function PortalSelection() {
               Crop Dairy
             </span>
             <span className="block text-[11px] font-bold uppercase tracking-wider text-emerald-600 -mt-1">
-              Procurement System
+              {t('procurementSystem', 'PROCUREMENT SYSTEM')}
             </span>
           </div>
         </div>
@@ -160,10 +159,10 @@ export default function PortalSelection() {
         {/* Page Titles */}
         <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-[#0F172A]">
-            {t('choosePortalTitle')}
+            {t('selectPortalTitle', 'Select Your Portal to Get Started')}
           </h1>
           <p className="text-slate-600 text-sm sm:text-base md:text-lg font-medium max-w-xl mx-auto">
-            {t('choosePortalSub')}
+            {t('selectPortalSubtitle', 'Access the Crop Dairy platform based on your role.')}
           </p>
         </div>
 
@@ -194,16 +193,16 @@ export default function PortalSelection() {
               {/* Sub-label & Main Title */}
               <div className="space-y-1 mb-2">
                 <span className="block text-[11px] font-bold uppercase tracking-wider text-emerald-600">
-                  FARMER PORTAL
+                  {t('farmerPortalLabel', 'FARMER PORTAL')}
                 </span>
                 <h2 className="text-2xl font-black text-[#0F172A] tracking-tight">
-                  FARMER
+                  {t('farmerTitle', 'FARMER')}
                 </h2>
               </div>
 
               {/* Description */}
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed font-medium mb-6">
-                Book procurement slots, track your live queue, view procurement status, and monitor payment updates.
+                {t('farmerDesc', 'Book procurement slots, track your live queue, view procurement status, and monitor payment updates.')}
               </p>
             </div>
 
@@ -213,7 +212,7 @@ export default function PortalSelection() {
                 onClick={() => navigate('/login?role=farmer')}
                 className="w-full py-3 px-5 rounded-2xl bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-1.5 transition-colors"
               >
-                <span>Farmer Login</span>
+                <span>{t('farmerLogin', 'Farmer Login')}</span>
                 <span ref={(el) => (arrowRefs.current[0] = el)} className="inline-block">›</span>
               </button>
 
@@ -221,12 +220,12 @@ export default function PortalSelection() {
                 onClick={() => navigate('/register')}
                 className="w-full py-2.5 px-5 rounded-2xl bg-[#F1F5F9] hover:bg-slate-200 text-[#334155] font-bold text-xs flex items-center justify-center gap-1 transition-colors"
               >
-                <span>New Farmer? Register</span>
+                <span>{t('newFarmerRegister', 'New Farmer? Register')}</span>
               </button>
             </div>
           </div>
 
-          {/* CARD 2: LOCAL PROCUREMENT CENTRE (FEATURED GREEN BORDER) */}
+          {/* CARD 2: LOCAL PROCUREMENT CENTRE (FEATURED GREEN BORDER - DIRECT WORKSPACE ROUTE) */}
           <div
             ref={(el) => (cardsRef.current[1] = el)}
             onMouseEnter={() => handleCardMouseEnter(1)}
@@ -251,16 +250,16 @@ export default function PortalSelection() {
               {/* Sub-label & Main Title */}
               <div className="space-y-1 mb-2">
                 <span className="block text-[11px] font-bold uppercase tracking-wider text-teal-600">
-                  CENTRE ADMINISTRATION
+                  {t('centreAdminLabel', 'CENTRE ADMINISTRATION')}
                 </span>
                 <h2 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight leading-snug">
-                  LOCAL PROCUREMENT CENTRE
+                  {t('localProcurementCentreTitle', 'LOCAL PROCUREMENT CENTRE')}
                 </h2>
               </div>
 
               {/* Description */}
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed font-medium mb-6">
-                Manage your procurement centre, monitor the live farmer queue, update procurement progress, and manage daily operations.
+                {t('localAdminDesc', 'Manage your procurement centre, monitor the live farmer queue, update procurement progress, and manage daily operations.')}
               </p>
             </div>
 
@@ -270,7 +269,7 @@ export default function PortalSelection() {
                 onClick={(e) => { e.stopPropagation(); navigate('/local-admin'); }}
                 className="w-full py-3 px-5 rounded-2xl bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-1.5 transition-colors"
               >
-                <span>Enter Procurement Centre Workspace</span>
+                <span>{t('enterProcurementWorkspace', 'Enter Procurement Centre Workspace')}</span>
                 <span ref={(el) => (arrowRefs.current[1] = el)} className="inline-block">›</span>
               </button>
             </div>
@@ -300,16 +299,16 @@ export default function PortalSelection() {
               {/* Sub-label & Main Title */}
               <div className="space-y-1 mb-2">
                 <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  PLATFORM ADMINISTRATION
+                  {t('platformAdminLabel', 'PLATFORM ADMINISTRATION')}
                 </span>
                 <h2 className="text-2xl font-black text-[#0F172A] tracking-tight">
-                  SUPER ADMIN
+                  {t('superAdminTitle', 'SUPER ADMIN')}
                 </h2>
               </div>
 
               {/* Description */}
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed font-medium mb-6">
-                Manage procurement centres, administrators, farmers, platform operations, analytics, and system configuration.
+                {t('superAdminDesc', 'Manage procurement centres, administrators, farmers, platform operations, analytics, and system configuration.')}
               </p>
             </div>
 
@@ -319,7 +318,7 @@ export default function PortalSelection() {
                 onClick={() => navigate('/login?role=super_admin')}
                 className="w-full py-3 px-5 rounded-2xl bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-1.5 transition-colors"
               >
-                <span>Super Admin Login</span>
+                <span>{t('superAdminLogin', 'Super Admin Login')}</span>
                 <span ref={(el) => (arrowRefs.current[2] = el)} className="inline-block">›</span>
               </button>
             </div>
@@ -332,7 +331,7 @@ export default function PortalSelection() {
       {/* 4. LOWER-LEFT 3D HERO AGENT & STATUS PILL */}
       <HeroAssistant onOpenChat={() => setIsChatOpen(true)} />
 
-      {/* 5. FLOATING HERO AI CHATBOT (LOWER RIGHT TRIGGER BUTTON) */}
+      {/* 5. FLOATING HERO AI CHATBOT (DRAWER) */}
       <HeroChatbot
         isOpenProp={isChatOpen}
         onCloseProp={() => setIsChatOpen(false)}

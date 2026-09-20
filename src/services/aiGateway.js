@@ -15,13 +15,26 @@ Be respectful, clear, encouraging, and provide step-by-step instructions.
 // Domain knowledge responses in canonical English
 function getDomainFallbackResponse(prompt) {
   const query = prompt.toLowerCase();
+  
+  let activeToken = '#128';
+  let activeDate = 'Today';
+  try {
+    const activeStr = localStorage.getItem('crop_dairy_active_booking');
+    if (activeStr) {
+      const active = JSON.parse(activeStr);
+      if (active.token_number) activeToken = active.token_number;
+      if (active.slot_date) activeDate = active.slot_date;
+    }
+  } catch (e) {
+    // Ignore parse error
+  }
 
   if (query.includes('queue') || query.includes('token') || query.includes('position')) {
-    return "🌾 **Queue Status**: Your token TK-104 is currently position #3 at Procurement Centre. Estimated wait time is approx 36 mins. Counter #2 will call your token soon. Please reach 10 minutes prior!";
+    return `🌾 **Queue Status**: Your token ${activeToken} is active for ${activeDate} at Government Procurement Centre. Estimated wait time is approx 32 mins. Counter #2 will call your token soon. Please reach 10 minutes prior!`;
   }
 
   if (query.includes('slot') || query.includes('book') || query.includes('appointment')) {
-    return "📅 **Slot Booking**: Go to 'My Slots' page, select your nearby procurement centre, pick an available date & time slot, and click 'Confirm Booking'. Digital token will be generated instantly!";
+    return `📅 **Slot Booking**: Your active slot is token ${activeToken} on ${activeDate}. To change or book a new slot, click '+ Book Slot' or 'Reschedule' under 'My Slot'. Digital tokens are generated instantly via Supabase PostgreSQL!`;
   }
 
   if (query.includes('moisture') || query.includes('quality') || query.includes('paddy') || query.includes('grade')) {
