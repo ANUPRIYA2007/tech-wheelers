@@ -3,6 +3,7 @@ import { ProtectedRoute, PublicRoute } from './ProtectedRoute';
 
 // Public pages
 import Splash from '../pages/Splash';
+import PortalSelection from '../pages/PortalSelection';
 import Landing from '../pages/Landing';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
@@ -38,6 +39,8 @@ export default function AppRoutes() {
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={<Splash />} />
+      <Route path="/splash" element={<Splash />} />
+      <Route path="/portal" element={<PortalSelection />} />
       <Route path="/landing" element={<Landing />} />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
@@ -58,12 +61,8 @@ export default function AppRoutes() {
         <Route path="notifications" element={<Notifications />} />
       </Route>
 
-      {/* Local Admin Routes */}
-      <Route path="/local-admin" element={
-        <ProtectedRoute allowedRoles={['local_admin']}>
-          <LocalAdminLayout />
-        </ProtectedRoute>
-      }>
+      {/* Local Admin Routes - Direct Procurement Centre Admin Workspace */}
+      <Route path="/local-admin" element={<LocalAdminLayout />}>
         <Route index element={<LocalAdminDashboard />} />
         <Route path="queue" element={<QueueManagement />} />
         <Route path="procurement" element={<ProcurementManagement />} />

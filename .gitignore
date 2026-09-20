@@ -28,3 +28,8 @@ dist-ssr
 *.sln
 *.sw?
 Thumbs.db
+
+# Scratch and build scripts
+scratch/
+*.mjs
+

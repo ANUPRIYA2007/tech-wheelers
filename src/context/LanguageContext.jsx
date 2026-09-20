@@ -1,50 +1,58 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-
-// Static catalogs
-import enCatalog from '../i18n/catalog/en.json';
-import taCatalog from '../i18n/catalog/ta.json';
-import hiCatalog from '../i18n/catalog/hi.json';
-
-const catalogs = { en: enCatalog, ta: taCatalog, hi: hiCatalog };
-
-const LANGUAGE_REGISTRY = [
-  { code: 'en', name: 'English', nativeName: 'English', speechCode: 'en-IN', translationSupported: true },
-  { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்', speechCode: 'ta-IN', translationSupported: true },
-  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', speechCode: 'hi-IN', translationSupported: true },
-];
+import { translationEngine, SUPPORTED_LANGUAGES, translateText } from '../services/translationEngine';
 
 const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState(() => {
-    return localStorage.getItem('crop-dairy-lang') || 'en';
+  const [currentLanguage, setCurrentLanguage] = useState(() => {
+    return localStorage.getItem('language') || localStorage.getItem('crop-dairy-lang') || 'en';
   });
 
   useEffect(() => {
-    localStorage.setItem('crop-dairy-lang', language);
-    document.documentElement.lang = language;
-  }, [language]);
+    localStorage.setItem('language', currentLanguage);
+    localStorage.setItem('crop-dairy-lang', currentLanguage);
+    document.documentElement.lang = currentLanguage;
+    document.documentElement.dir = 'ltr';
+    translationEngine.setLanguage(currentLanguage);
+  }, [currentLanguage]);
 
-  const t = useCallback((key, fallback) => {
-    const catalog = catalogs[language] || catalogs.en;
-    return catalog[key] || catalogs.en[key] || fallback || key;
-  }, [language]);
-
-  const changeLanguage = useCallback((code) => {
-    const lang = LANGUAGE_REGISTRY.find(l => l.code === code);
-    if (lang) setLanguage(code);
+  const setLanguage = useCallback((code) => {
+    const langObj = SUPPORTED_LANGUAGES.find(l => l.code === code);
+    if (langObj) {
+      setCurrentLanguage(code);
+      localStorage.setItem('language', code);
+      localStorage.setItem('crop-dairy-lang', code);
+      translationEngine.setLanguage(code);
+    }
   }, []);
 
+  /**
+   * Centralized translate method supporting nested key paths e.g. t("welcome.message") or t("sidebar.home")
+   * @param {string} key 
+   * @param {Object|string} [params] 
+   * @param {string} [fallbackText] 
+   */
+  const translate = useCallback((key, params = {}, fallbackText = '') => {
+    return translationEngine.translate(key, params, fallbackText);
+  }, [currentLanguage]);
+
+  // Alias `t` to `translate` for shorthand use
+  const t = translate;
+
   const getCurrentLanguage = useCallback(() => {
-    return LANGUAGE_REGISTRY.find(l => l.code === language) || LANGUAGE_REGISTRY[0];
-  }, [language]);
+    return SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage) || SUPPORTED_LANGUAGES[0];
+  }, [currentLanguage]);
 
   const value = {
-    language,
+    currentLanguage,
+    language: currentLanguage,
+    setLanguage,
+    changeLanguage: setLanguage,
+    translate,
     t,
-    changeLanguage,
     getCurrentLanguage,
-    languages: LANGUAGE_REGISTRY,
+    languages: SUPPORTED_LANGUAGES,
+    translateText: (text, sourceLang = 'en') => translateText(text, sourceLang, currentLanguage)
   };
 
   return (

@@ -3,13 +3,19 @@ import { Bot, Send, Mic, MicOff, Volume2, X, Sparkles, User, RefreshCw } from 'l
 import { askHeroAI } from '../../services/aiGateway';
 import { useLanguage } from '../../context/LanguageContext';
 
-export default function HeroChatbot() {
+export default function HeroChatbot({ isOpenProp, onCloseProp }) {
   const { language, t } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = isOpenProp !== undefined ? isOpenProp : internalOpen;
+  
+  const setIsOpen = (val) => {
+    setInternalOpen(val);
+    if (!val && onCloseProp) onCloseProp();
+  };
   const [messages, setMessages] = useState([
     {
       sender: 'hero',
-      text: 'வணக்கம்! I am Hero, your AI Farming Assistant. Ask me about queue tokens, slot booking, crop moisture, or payment status!',
+      text: t('hero.welcome', 'Hello! I am Hero, your AI Farming Assistant. Ask me about queue tokens, slot booking, crop moisture, or payment status!'),
       time: 'Just now'
     }
   ]);
@@ -90,10 +96,11 @@ export default function HeroChatbot() {
   };
 
   const SUGGESTED_PROMPTS = [
-    "Where am I in the queue?",
-    "How do I book a slot?",
-    "What is the moisture limit for Paddy?",
-    "When will my payment arrive?"
+    t('chipToken', 'My Token'),
+    t('chipSlot', 'Book Slot'),
+    t('chipProcurement', 'Procurement Status'),
+    t('chipPayment', 'Payment'),
+    t('chipHelp', 'Help')
   ];
 
   return (
@@ -222,7 +229,7 @@ export default function HeroChatbot() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Ask Hero about queue, slots, crop..."
+              placeholder={t('typeOrSpeakPlaceholder', 'Ask Hero about queue, slots, crop...')}
               className="flex-1 px-3.5 py-2.5 rounded-xl bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-surface-900 dark:text-white placeholder-surface-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
 

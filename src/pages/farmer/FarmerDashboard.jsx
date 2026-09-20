@@ -17,30 +17,26 @@ export default function FarmerDashboard() {
   const [aiLoading, setAiLoading] = useState(false);
 
   // Dynamic values initialized with high-fidelity reference defaults
-  const [dashboard, setDashboard] = useState({
+  const [dashboard] = useState({
     tokenNumber: '#128',
-    tokenStatus: 'WAITING', // WAITING -> செயலில் உள்ளது
+    tokenStatus: 'WAITING',
     farmersAhead: 14,
     estimatedWaitMins: 32,
     recommendedArrival: '11:15 AM',
-    centreName: 'அரசு கொள்முதல் மையம் - கும்மிடிப்பூண்டி',
-    centreStatus: 'IN_OPERATION', // செயல்பாட்டில்
+    centreName: 'Govt Procurement Centre - Main DPC',
+    centreStatus: 'IN_OPERATION',
     currentToken: '#114',
     distanceKm: '4.2',
-    slotDate: 'இன்று - 25 ஏப்ரல், 2025',
+    slotDate: 'Today',
     slotTime: '10:30 AM',
-    slotCentre: 'கும்மிடிப்பூண்டி மையம்',
+    slotCentre: 'Main DPC',
     slotStatus: 'ACTIVE',
-    procurementStage: 3, // 1: Slot, 2: Farmer Arrived, 3: Quality Check, 4: Weight, 5: Accepted, 6: Payment
+    procurementStage: 3,
     paymentAmount: '₹12,450',
     paymentStatus: 'PROCESSING',
-    expectedPaymentDate: 'இன்று',
+    expectedPaymentDate: 'Today',
     weatherTemp: '32°C',
-    weatherCondition: 'பகுதி வெயில்',
-    weatherLocation: 'கோவில்பட்டி, தமிழ்நாடு',
-    weatherDate: '25 ஏப்ரல், 2025',
-    weatherAdvisory: 'இன்று மழை வாய்ப்பு இல்லை. வெயில் அதிகமாக இருக்கும். பயிர்களுக்கு தண்ணீர் பாய்ச்சவும்.',
-    bottomAdvisory: 'மழை வாய்ப்பு குறைவு. நிலத்தில் ஈரப்பதம் பராமரிக்க, தண்ணீர் பாய்ச்சவும்.'
+    weatherLocation: 'Thanjavur, TN',
   });
 
   const handleAiSend = async (customQuery) => {
@@ -342,7 +338,7 @@ export default function FarmerDashboard() {
                 </div>
                 <div className="flex items-center gap-1 text-slate-600 font-semibold pt-1">
                   <Navigation className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>{dashboard.distanceKm} கி.மீ {t('approx')}</span>
+                  <span>{dashboard.distanceKm} km {t('approx')}</span>
                 </div>
               </div>
 
@@ -538,9 +534,9 @@ export default function FarmerDashboard() {
                 <Info className="w-4 h-4 text-sky-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-snug">
-                    உங்கள் Token #128-க்கு இன்னும் 10 விவசாயிகள் மட்டுமே உள்ளனர்.
+                    {t('queueNotificationText', { token: '#128', count: 10 }, 'Only 10 farmers ahead of Token #128.')}
                   </p>
-                  <p className="text-[10px] text-slate-400 mt-1 font-medium">5 நிமிடங்களுக்கு முன்</p>
+                  <p className="text-[10px] text-slate-400 mt-1 font-medium">{t('minsAgo', { mins: 5 }, '5 mins ago')}</p>
                 </div>
               </div>
 
@@ -549,9 +545,9 @@ export default function FarmerDashboard() {
                 <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-snug">
-                    கொள்முதல் மையத்தில் சிறிய தாமதம். உங்கள் எதிர்பார்க்கப்படும் நேரம் 11:15 AM → 11:35 AM ஆக மாற்றப்பட்டுள்ளது.
+                    {t('delayNotificationText', 'Minor delay at procurement centre. Expected arrival time updated to 11:35 AM.')}
                   </p>
-                  <p className="text-[10px] text-slate-400 mt-1 font-medium">15 நிமிடங்களுக்கு முன்</p>
+                  <p className="text-[10px] text-slate-400 mt-1 font-medium">{t('minsAgo', { mins: 15 }, '15 mins ago')}</p>
                 </div>
               </div>
             </div>

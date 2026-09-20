@@ -18,7 +18,7 @@ export default function Splash() {
         gsap.to(containerRef.current, {
           opacity: 0,
           duration: 0.4,
-          onComplete: () => navigate('/landing', { replace: true }),
+          onComplete: () => navigate('/portal', { replace: true }),
         });
       },
     });

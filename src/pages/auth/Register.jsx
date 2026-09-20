@@ -5,9 +5,10 @@ import { useLanguage } from '../../context/LanguageContext';
 import { gsap } from 'gsap';
 import { 
   Sprout, Eye, EyeOff, ChevronLeft, ChevronRight, Check, Bot, 
-  ShieldCheck, MapPin, Upload, AlertCircle, RefreshCw, Sparkles 
+  ShieldCheck, MapPin, Upload, AlertCircle, RefreshCw, Sparkles, ArrowLeft 
 } from 'lucide-react';
 import Button from '../../components/common/Button';
+import LanguageSelector from '../../components/common/LanguageSelector';
 import { STATES_AND_DISTRICTS } from '../../data/locations';
 
 const STEPS = [
@@ -47,7 +48,7 @@ export default function Register() {
   });
 
   const [heroMessage, setHeroMessage] = useState(
-    "வணக்கம்! நான் உங்கள் Hero AI. Registration process-ல் உங்களுக்கு உதவுகிறேன்."
+    t('registerWelcomeMessage', 'Hello! I am your Hero AI. I am here to guide you through registration.')
   );
 
   const updateField = (field, value) => {
@@ -82,61 +83,61 @@ export default function Register() {
     switch (step) {
       case 0: // Create Account
         if (!form.fullName.trim()) {
-          highlightField('fullName', "உங்கள் Name-ஐ உள்ளிடுங்கள். (Please enter your name)");
-          setError('Name is required.');
+          highlightField('fullName', t('enterNameError', 'Please enter your Full Name.'));
+          setError(t('enterNameError', 'Name is required.'));
           return false;
         }
         if (!form.phoneOrEmail.trim()) {
-          highlightField('phoneOrEmail', "Phone அல்லது Email-ஐ உள்ளிடுங்கள். (Enter phone or email)");
-          setError('Phone or Email is required.');
+          highlightField('phoneOrEmail', t('enterPhoneEmailError', 'Please enter your Phone or Email.'));
+          setError(t('enterPhoneEmailError', 'Phone or Email is required.'));
           return false;
         }
         if (!form.password || form.password.length < 6) {
-          highlightField('password', "Password குறைந்தபட்சம் 6 எழுத்துகள் இருக்க வேண்டும்.");
-          setError('Password must be at least 6 characters.');
+          highlightField('password', t('passwordLengthError', 'Password must be at least 6 characters.'));
+          setError(t('passwordLengthError', 'Password must be at least 6 characters.'));
           return false;
         }
         if (form.password !== form.confirmPassword) {
-          highlightField('confirmPassword', "Password மற்றும் Confirm Password பொருந்தவில்லை.");
-          setError('Passwords do not match.');
+          highlightField('confirmPassword', t('passwordMismatchError', 'Passwords do not match.'));
+          setError(t('passwordMismatchError', 'Passwords do not match.'));
           return false;
         }
-        setHeroMessage("மிக நன்று! இப்போது உங்கள் அரசு சான்றிதழைச் சரிபார்க்கவும்.");
+        setHeroMessage(t('step1SuccessGuide', 'Great! Now verify your Government Proof.'));
         return true;
 
       case 1: // Government Proof Verification
         if (!form.proofType) {
-          setError('Please select a Government Proof type.');
+          setError(t('selectProofTypeError', 'Please select a Government Proof type.'));
           return false;
         }
         if (form.proofStatus !== 'VERIFIED') {
-          setError('Government proof verification is required to proceed.');
-          setHeroMessage("அரசு சான்றிதழைச் சரிபார்க்க 'Verify Proof' பொத்தானைக் கிளிக் செய்யவும்.");
+          setError(t('proofRequiredError', 'Government proof verification is required to proceed.'));
+          setHeroMessage(t('verifyProofGuide', "Click 'Verify Proof' to validate your document."));
           return false;
         }
-        setHeroMessage("அரசு சான்றிதழ் சரிபார்க்கப்பட்டது! உங்கள் இருப்பிட விவரங்களை வழங்கவும்.");
+        setHeroMessage(t('step2SuccessGuide', 'Government proof verified! Please provide your location details.'));
         return true;
 
       case 2: // Location
         if (!form.state) {
-          highlightField('state', "மாநிலத்தைத் தேர்ந்தெடுக்கவும்.");
-          setError('State is required.');
+          highlightField('state', t('selectStateError', 'Please select your State.'));
+          setError(t('selectStateError', 'State is required.'));
           return false;
         }
         if (!form.district) {
-          highlightField('district', "மாவட்டத்தைத் தேர்ந்தெடுக்கவும்.");
-          setError('District is required.');
+          highlightField('district', t('selectDistrictError', 'Please select your District.'));
+          setError(t('selectDistrictError', 'District is required.'));
           return false;
         }
         if (!form.village.trim()) {
-          highlightField('village', "கிராமத்தின் பெயரை உள்ளிடுங்கள்.");
-          setError('Village is required.');
+          highlightField('village', t('enterVillageError', 'Please enter your Village name.'));
+          setError(t('enterVillageError', 'Village is required.'));
           return false;
         }
         const pincodeRegex = /^[1-9][0-9]{5}$/;
         if (!pincodeRegex.test(form.pincode.trim())) {
-          highlightField('pincode', "சரியான 6 இலக்க Pincode-ஐ உள்ளிடுங்கள்.");
-          setError('Pincode must be exactly 6 digits (e.g. 613001).');
+          highlightField('pincode', t('enterPincodeError', 'Pincode must be exactly 6 digits.'));
+          setError(t('enterPincodeError', 'Pincode must be exactly 6 digits (e.g. 613001).'));
           return false;
         }
         return true;
@@ -172,7 +173,7 @@ export default function Register() {
     // Mock/Sandbox server-side verification delay
     setTimeout(() => {
       setForm(prev => ({ ...prev, proofStatus: 'VERIFIED', proofVerified: true }));
-      setHeroMessage("✓ அரசு சான்றிதழ் வெற்றிகரமாக சரிபார்க்கப்பட்டது!");
+      setHeroMessage(t('proofVerifiedSuccess', '✓ Government document verified successfully!'));
     }, 1200);
   };
 
@@ -264,6 +265,18 @@ export default function Register() {
               <Sprout className="w-5 h-5" />
             </div>
             <span className="text-xl font-extrabold text-slate-900 dark:text-white">Crop Dairy</span>
+          </div>
+
+          {/* Back to Portal Selection Link & Language Selector */}
+          <div className="flex items-center justify-between mb-6">
+            <Link
+              to="/portal"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Portal Selection
+            </Link>
+            <LanguageSelector />
           </div>
 
           <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">

@@ -40,7 +40,7 @@ export default function Sidebar() {
           </div>
           <div>
             <span className="text-xl font-extrabold tracking-tight text-emerald-800 dark:text-emerald-400">Crop Dairy</span>
-            <p className="text-[10px] text-surface-500 font-medium leading-tight">விவசாயிகளின் நம்பகமான துணை</p>
+            <p className="text-[10px] text-surface-500 font-medium leading-tight">{t('tagline')}</p>
           </div>
         </div>
       </div>
