@@ -22,30 +22,28 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+import useLiveQueue from '../../hooks/useLiveQueue';
+
 export default function LocalAdminDashboard() {
   const { t } = useLanguage();
   const outletCtx = useOutletContext();
   const centreStatus = outletCtx?.centreStatus || 'OPERATIONAL';
+  const centreId = outletCtx?.centreId || 'c0000000-0000-0000-0000-000000000001';
 
-  // State: Live Queue Dataset
-  const [queue, setQueue] = useState([
-    { id: 'TK-114', name: 'Ramesh Kumar', phone: '+91 98402 12345', crop: 'Paddy Grade A', scheduled: '10:30 AM', arrived: '10:25 AM', waitMins: 5, counter: 'Counter 2', status: 'IN_PROCESSING', bagCount: 110, estWeightQtl: 55.0 },
-    { id: 'TK-115', name: 'Senthil Nathan', phone: '+91 94431 88921', crop: 'Paddy Grade A', scheduled: '10:45 AM', arrived: '10:40 AM', waitMins: 12, counter: 'Counter 1', status: 'WAITING', bagCount: 90, estWeightQtl: 45.0 },
-    { id: 'TK-116', name: 'Anitha Devi', phone: '+91 97892 44312', crop: 'Groundnut', scheduled: '11:00 AM', arrived: '10:50 AM', waitMins: 18, counter: 'Counter 3', status: 'WAITING', bagCount: 60, estWeightQtl: 30.0 },
-    { id: 'TK-117', name: 'Muthu Krishnan', phone: '+91 91500 66723', crop: 'Paddy Grade A', scheduled: '11:15 AM', arrived: '11:05 AM', waitMins: 22, counter: 'Counter 2', status: 'WAITING', bagCount: 140, estWeightQtl: 70.0 },
-    { id: 'TK-118', name: 'Kavitha Rajan', phone: '+91 99401 55234', crop: 'Sugarcane', scheduled: '11:30 AM', arrived: '11:15 AM', waitMins: 25, counter: 'Counter 4', status: 'WAITING', bagCount: 200, estWeightQtl: 100.0 },
-    { id: 'TK-119', name: 'Ganesan P', phone: '+91 98651 33412', crop: 'Paddy Grade A', scheduled: '11:45 AM', arrived: '11:20 AM', waitMins: 30, counter: 'Counter 1', status: 'WAITING', bagCount: 85, estWeightQtl: 42.5 },
-    { id: 'TK-113', name: 'Murugan V', phone: '+91 97512 88411', crop: 'Paddy Grade A', scheduled: '10:15 AM', arrived: '10:05 AM', waitMins: 0, counter: 'Counter 1', status: 'COMPLETED', bagCount: 100, estWeightQtl: 50.0, paidAmount: 110150 },
-    { id: 'TK-112', name: 'Lakshmi Ammal', phone: '+91 94861 22345', crop: 'Paddy Grade A', scheduled: '10:00 AM', arrived: '09:55 AM', waitMins: 0, counter: 'Counter 3', status: 'COMPLETED', bagCount: 120, estWeightQtl: 60.0, paidAmount: 132180 },
-  ]);
+  // Live Queue Dataset from Supabase Realtime
+  const { queue: dbQueue, loading: queueLoading, callNextToken: callNext, updateTokenStatus: updateStatus } = useLiveQueue(centreId);
+
+  const queue = dbQueue || [];
 
   // Active Processing Inspection Desk State
-  const [activeToken, setActiveToken] = useState(queue[0]);
+  const [activeTokenState, setActiveTokenState] = useState(null);
+  const activeToken = activeTokenState || queue[0] || null;
+
   const [moisturePct, setMoisturePct] = useState(15.2);
   const [impurityPct, setImpurityPct] = useState(1.2);
   const [grossWeightQtl, setGrossWeightQtl] = useState(55.0);
   const [tareWeightQtl, setTareWeightQtl] = useState(2.6);
-  const [mspRate, setMspRate] = useState(2203); // Government MSP per Quintal
+  const [mspRate, setMspRate] = useState(2203);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [noticeMessage, setNoticeMessage] = useState('');
@@ -68,10 +66,10 @@ export default function LocalAdminDashboard() {
     const totalTonnage = queue.reduce((acc, q) => acc + (q.estWeightQtl || 0), 0);
     const totalPayout = queue.filter(q => q.paidAmount).reduce((acc, q) => acc + q.paidAmount, 0) + (completed * 110000);
     return {
-      todayFarmers: queue.length + 34,
-      currentToken: activeToken?.id || '#TK-114',
+      todayFarmers: queue.length,
+      currentToken: activeToken?.id || '#TK-101',
       waitingCount: waiting,
-      totalTonnageQtl: (totalTonnage + 120).toFixed(1),
+      totalTonnageQtl: totalTonnage.toFixed(1),
       totalPayoutToday: totalPayout || 406453,
       avgWaitMins: 6.5
     };
@@ -87,54 +85,48 @@ export default function LocalAdminDashboard() {
   }, [queue, searchQuery, statusFilter]);
 
   // Action: Call Next Token
-  const handleCallNextToken = () => {
+  const handleCallNextToken = async () => {
     if (centreStatus !== 'OPERATIONAL') {
       setNoticeMessage('⚠️ Centre is currently ' + centreStatus + '. Please set status to OPERATIONAL to call tokens.');
       setTimeout(() => setNoticeMessage(''), 3000);
       return;
     }
 
-    const nextWaiting = queue.find(q => q.status === 'WAITING');
-    if (nextWaiting) {
-      setQueue(prev => prev.map(q => {
-        if (q.id === activeToken.id && q.status === 'IN_PROCESSING') {
-          return { ...q, status: 'COMPLETED', paidAmount: calculatedPayout };
-        }
-        if (q.id === nextWaiting.id) {
-          return { ...q, status: 'IN_PROCESSING' };
-        }
-        return q;
-      }));
-      setActiveToken({ ...nextWaiting, status: 'IN_PROCESSING' });
-      setGrossWeightQtl(nextWaiting.estWeightQtl);
-      setTareWeightQtl(parseFloat((nextWaiting.estWeightQtl * 0.04).toFixed(2)));
-      setNoticeMessage(`✅ Called Token ${nextWaiting.id} (${nextWaiting.name}) to Counter 2 desk.`);
+    const res = await callNext(1);
+    if (res && res.success) {
+      setNoticeMessage(`✅ Called Token ${res.token_number} to Counter 1.`);
       setTimeout(() => setNoticeMessage(''), 3500);
     } else {
-      setNoticeMessage('ℹ️ No more waiting tokens in queue.');
-      setTimeout(() => setNoticeMessage(''), 3000);
+      const nextWaiting = queue.find(q => q.status === 'WAITING');
+      if (nextWaiting) {
+        if (nextWaiting.tokenId) {
+          await updateStatus(nextWaiting.tokenId, 'CALLED', 1);
+        }
+        setActiveTokenState({ ...nextWaiting, status: 'CALLED' });
+        setNoticeMessage(`✅ Called Token ${nextWaiting.id} (${nextWaiting.name}) to Counter 1.`);
+        setTimeout(() => setNoticeMessage(''), 3500);
+      } else {
+        setNoticeMessage('ℹ️ No more waiting tokens in queue.');
+        setTimeout(() => setNoticeMessage(''), 3000);
+      }
     }
   };
 
-  // Action: Approve & Send DBT Payment
-  const handleApproveInspection = () => {
+  // Action: Approve Inspection & Status Update
+  const handleApproveInspection = async () => {
     if (!activeToken) return;
 
-    setQueue(prev => prev.map(q => {
-      if (q.id === activeToken.id) {
-        return { ...q, status: 'COMPLETED', paidAmount: calculatedPayout };
-      }
-      return q;
-    }));
+    if (activeToken.tokenId) {
+      await updateStatus(activeToken.tokenId, 'COMPLETED');
+    }
 
     setNoticeMessage(`🎉 Token ${activeToken.id} Approved! ₹${calculatedPayout.toLocaleString('en-IN')} DBT Transfer Dispatched.`);
     setTimeout(() => setNoticeMessage(''), 4000);
 
-    // Call next token automatically if available
     const nextWaiting = queue.find(q => q.status === 'WAITING' && q.id !== activeToken.id);
     if (nextWaiting) {
-      setActiveToken(nextWaiting);
-      setGrossWeightQtl(nextWaiting.estWeightQtl);
+      setActiveTokenState(nextWaiting);
+      setGrossWeightQtl(nextWaiting.estWeightQtl || 50.0);
     }
   };
 
@@ -296,54 +288,74 @@ export default function LocalAdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-800">
-                {filteredQueue.map((item) => (
-                  <tr 
-                    key={item.id}
-                    className={`transition-colors hover:bg-slate-50/80 ${
-                      activeToken?.id === item.id ? 'bg-emerald-50/60 font-bold' : ''
-                    }`}
-                  >
-                    <td className="py-3.5 px-4 font-black text-slate-900">{item.id}</td>
-                    <td className="py-3.5 px-4">
-                      <div>
-                        <p className="font-bold text-slate-900">{item.name}</p>
-                        <p className="text-[10px] text-slate-400 font-normal">{item.phone}</p>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-emerald-700">{item.crop}</td>
-                    <td className="py-3.5 px-4 text-slate-500">{item.arrived}</td>
-                    <td className="py-3.5 px-4 font-bold text-slate-700">{item.counter}</td>
-                    <td className="py-3.5 px-4">
-                      {item.status === 'IN_PROCESSING' && (
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-[10px] inline-flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
-                          Processing
-                        </span>
-                      )}
-                      {item.status === 'WAITING' && (
-                        <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-extrabold text-[10px]">
-                          Waiting ({item.waitMins}m)
-                        </span>
-                      )}
-                      {item.status === 'COMPLETED' && (
-                        <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-extrabold text-[10px]">
-                          Completed
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => {
-                          setActiveToken(item);
-                          setGrossWeightQtl(item.estWeightQtl);
-                        }}
-                        className="py-1 px-3 rounded-xl bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700 font-bold text-[11px] transition-colors"
-                      >
-                        Inspect
-                      </button>
+                {queueLoading ? (
+                  <tr>
+                    <td colSpan="7" className="py-8 text-center text-slate-400 animate-pulse font-bold">
+                      Connecting to Supabase Realtime Queue...
                     </td>
                   </tr>
-                ))}
+                ) : filteredQueue.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="py-8 text-center text-slate-400 font-semibold">
+                      No booked farmers in live queue for this centre yet.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredQueue.map((item) => (
+                    <tr 
+                      key={item.id}
+                      className={`transition-colors hover:bg-slate-50/80 ${
+                        activeToken?.id === item.id ? 'bg-emerald-50/60 font-bold' : ''
+                      }`}
+                    >
+                      <td className="py-3.5 px-4 font-black text-slate-900">{item.id}</td>
+                      <td className="py-3.5 px-4">
+                        <div>
+                          <p className="font-bold text-slate-900">{item.name}</p>
+                          <p className="text-[10px] text-slate-400 font-normal">{item.phone}</p>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-emerald-700">{item.crop}</td>
+                      <td className="py-3.5 px-4 text-slate-500">{item.arrived}</td>
+                      <td className="py-3.5 px-4 font-bold text-slate-700">{item.counter}</td>
+                      <td className="py-3.5 px-4">
+                        {item.status === 'CALLED' && (
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white font-black text-[10px] inline-flex items-center gap-1 shadow-xs animate-bounce">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                            CALLED
+                          </span>
+                        )}
+                        {item.status === 'IN_PROCESSING' && (
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-[10px] inline-flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
+                            Processing
+                          </span>
+                        )}
+                        {item.status === 'WAITING' && (
+                          <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-extrabold text-[10px]">
+                            Waiting ({item.waitMins}m)
+                          </span>
+                        )}
+                        {item.status === 'COMPLETED' && (
+                          <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-extrabold text-[10px]">
+                            Completed
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          onClick={() => {
+                            setActiveTokenState(item);
+                            setGrossWeightQtl(item.estWeightQtl || 50.0);
+                          }}
+                          className="py-1 px-3 rounded-xl bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700 font-bold text-[11px] transition-colors"
+                        >
+                          Inspect
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

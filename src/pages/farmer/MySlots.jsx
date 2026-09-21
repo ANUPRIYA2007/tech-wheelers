@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useMyBookings } from '../../hooks/useMyBookings';
-import { cancelSlot } from '../../services/bookingService';
+import { cancelSlot, deleteBooking } from '../../services/bookingService';
 import BookSlotModal from '../../components/booking/BookSlotModal';
 import RescheduleModal from '../../components/booking/RescheduleModal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { 
   CalendarCheck, Plus, Clock, MapPin, X, RefreshCw, Ticket, 
-  CheckCircle2, AlertCircle, ShieldCheck 
+  CheckCircle2, AlertCircle, ShieldCheck, Trash2
 } from 'lucide-react';
 
 export default function MySlots() {
@@ -18,6 +18,8 @@ export default function MySlots() {
   const [rescheduleBooking, setRescheduleBooking] = useState(null);
   const [cancelBooking, setCancelBooking] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [deleteBookingTarget, setDeleteBookingTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const handleConfirmCancel = async () => {
     if (!cancelBooking?.booking_id || cancelLoading) return;
@@ -32,6 +34,24 @@ export default function MySlots() {
       setCancelBooking(null);
     }
   };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteBookingTarget?.booking_id || deleteLoading) return;
+    setDeleteLoading(true);
+    try {
+      const res = await deleteBooking(deleteBookingTarget.booking_id);
+      if (res && !res.success) {
+        alert(res.error || 'Failed to delete cancelled booking.');
+      }
+      await refreshBookings();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleteLoading(false);
+      setDeleteBookingTarget(null);
+    }
+  };
+
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto text-slate-800 dark:text-slate-100 font-sans">
@@ -165,6 +185,16 @@ export default function MySlots() {
                       </button>
                     </div>
                   )}
+
+                  {isCancelled && (
+                    <button
+                      onClick={() => setDeleteBookingTarget(slot)}
+                      className="px-3.5 py-2 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 font-bold text-xs hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors inline-flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -204,6 +234,20 @@ export default function MySlots() {
         onCancel={() => setCancelBooking(null)}
       />
 
+      {/* DELETE CANCELLED SLOT CONFIRMATION DIALOG */}
+      <ConfirmDialog
+        isOpen={Boolean(deleteBookingTarget)}
+        title="Delete cancelled slot?"
+        message="This cancelled booking will be permanently removed from your slot history."
+        confirmLabel="Delete"
+        cancelLabel="Keep"
+        variant="danger"
+        loading={deleteLoading}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteBookingTarget(null)}
+      />
+
     </div>
   );
 }
+
