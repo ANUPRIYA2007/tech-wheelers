@@ -6,10 +6,11 @@ import { useMyBookings } from '../../hooks/useMyBookings';
 import { 
   Sprout, Calendar, CalendarCheck, Users, Package, CreditCard,
   ChevronRight, CheckCircle2, Ticket, Clock, MapPin, Eye,
-  Mic, Send, Sparkles, ArrowRight
+  Mic, Send, Sparkles, ArrowRight, Plus
 } from 'lucide-react';
 import { askHeroAI } from '../../services/aiGateway';
 import ProcurementRouteMap from '../../components/common/ProcurementRouteMap';
+import BookSlotModal from '../../components/booking/BookSlotModal';
 
 export default function FarmerDashboard() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function FarmerDashboard() {
   const [isListening, setIsListening] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState(null);
+  const [isBookModalOpen, setIsBookModalOpen] = useState(false);
 
   const farmerName = profile?.full_name || 'Ramesh Kumar';
 
@@ -113,7 +115,7 @@ export default function FarmerDashboard() {
           
           {/* Card 1: Book Slot */}
           <div 
-            onClick={() => navigate('/farmer/slots')}
+            onClick={() => setIsBookModalOpen(true)}
             className="group rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 shadow-2xs hover:shadow-md hover:border-[#16A34A] transition-all cursor-pointer flex items-center justify-between"
           >
             <div className="flex items-center gap-3.5">
@@ -212,13 +214,22 @@ export default function FarmerDashboard() {
                   My Latest Slot
                 </h2>
               </div>
-              <button 
-                onClick={() => navigate('/farmer/slots')}
-                className="text-xs font-bold text-[#16A34A] hover:underline inline-flex items-center gap-1"
-              >
-                <span>View All</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsBookModalOpen(true)}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-[#16A34A] dark:text-emerald-300 font-extrabold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Book Slot</span>
+                </button>
+                <button 
+                  onClick={() => navigate('/farmer/slots')}
+                  className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-[#16A34A] inline-flex items-center gap-0.5 cursor-pointer"
+                >
+                  <span>View All</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
             {bookingsLoading ? (
@@ -287,8 +298,8 @@ export default function FarmerDashboard() {
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Book a procurement slot to get started.</p>
                 </div>
                 <button
-                  onClick={() => navigate('/farmer/slots')}
-                  className="px-4 py-2 rounded-xl bg-[#16A34A] hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-colors"
+                  onClick={() => setIsBookModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-[#16A34A] hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
                 >
                   Book Slot →
                 </button>
@@ -300,7 +311,7 @@ export default function FarmerDashboard() {
           <div className="mt-5 pt-3">
             <button
               onClick={() => navigate('/farmer/slots')}
-              className="w-full py-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#16A34A] dark:text-emerald-300 font-extrabold text-xs hover:bg-emerald-100/60 transition-colors flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/20 text-[#16A34A] dark:text-emerald-300 font-extrabold text-xs hover:bg-emerald-100/60 transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <Eye className="w-4 h-4" />
               <span>View Details</span>
@@ -405,12 +416,15 @@ export default function FarmerDashboard() {
 
       {/* 4. MY PROCUREMENT CENTRE (Full-width Card at Bottom) */}
       <ProcurementRouteMap
-        centreName={displayBooking.centre_name || 'Government Procurement Centre - Main DPC'}
-        centreLocation={displayBooking.centre_location || 'Thanjavur, Tamil Nadu'}
-        currentToken="#101"
-        yourToken={displayBooking.token_number || '#120'}
-        distanceKm="4.2"
-        operatingStatus="Operational"
+        currentToken={activeBooking?.token_number || '#101'}
+        yourToken={activeBooking?.token_number || '#102'}
+      />
+
+      {/* 5. BOOK SLOT MODAL */}
+      <BookSlotModal
+        isOpen={isBookModalOpen}
+        onClose={() => setIsBookModalOpen(false)}
+        onSuccess={() => setIsBookModalOpen(false)}
       />
 
     </div>

@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   Sprout, Home, CalendarCheck, Users, Package, CreditCard,
-  Bell, Settings, ChevronRight
+  Bell, ChevronRight, LogOut
 } from 'lucide-react';
 import HeroModel from '../hero/HeroModel';
 
@@ -20,7 +20,18 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { signOut } = useAuth();
   const [animState, setAnimState] = useState('idle');
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('Logout error:', err);
+      navigate('/login', { replace: true });
+    }
+  };
 
   const handleWaveComplete = () => {
     setAnimState('idle');
@@ -31,10 +42,10 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="hidden lg:flex lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:flex-col bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 z-30 shadow-xs select-none">
+    <aside className="hidden lg:flex lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:flex-col bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 z-30 shadow-xs select-none transition-colors duration-200">
       
       {/* Brand Logo & Tagline */}
-      <div className="pt-5 pb-4 px-5 border-b border-slate-100 dark:border-slate-800">
+      <div className="pt-5 pb-4 px-5 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#16A34A] flex items-center justify-center shadow-md shadow-emerald-600/20 flex-shrink-0">
             <Sprout className="w-5 h-5 text-white" />
@@ -80,62 +91,47 @@ export default function Sidebar() {
             )}
           </NavLink>
         ))}
-      </nav>
 
-      {/* Bottom Section: 3D Hero Model Box + Settings */}
-      <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
-        
-        {/* Light Mint Hero AI Card */}
-        <div className="bg-[#E6F4EA] dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/60 rounded-2xl p-3 shadow-2xs text-center relative overflow-visible">
-          
-          {/* Full-Body 3D Farmer Model */}
-          <div 
-            onClick={handleRobotClick}
-            className="w-full h-[170px] relative overflow-visible cursor-pointer"
-            title="Click Hero AI to greet"
-          >
-            <HeroModel
-              animState={animState}
-              onWaveComplete={handleWaveComplete}
-              className="w-full h-full"
-            />
-          </div>
-
-          {/* Floating Status Pill Directly Below Feet */}
-          <div className="flex justify-center mt-1">
-            <button
-              onClick={() => navigate('/farmer')}
-              className="bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 text-[11px] font-extrabold px-3 py-1 rounded-full shadow-2xs inline-flex items-center gap-1.5 hover:scale-105 transition-transform"
+        {/* 3D Hero AI Mini Box in nav area */}
+        <div className="pt-2">
+          <div className="bg-[#E6F4EA] dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/60 rounded-2xl p-2.5 text-center relative overflow-visible">
+            {/* Full-Body 3D Farmer Model */}
+            <div 
+              onClick={handleRobotClick}
+              className="w-full h-[140px] relative overflow-visible cursor-pointer"
+              title="Click Hero AI to greet"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Hero AI</span>
-              <ChevronRight className="w-3 h-3 text-emerald-600" />
-            </button>
-          </div>
+              <HeroModel
+                animState={animState}
+                onWaveComplete={handleWaveComplete}
+                className="w-full h-full"
+              />
+            </div>
 
-          {/* Tagline Box */}
-          <div className="mt-2 text-center">
-            <p className="text-xs font-extrabold text-emerald-900 dark:text-emerald-200 leading-tight">
-              Better Farming<br />Brighter Future
-            </p>
+            {/* Floating Status Pill */}
+            <div className="flex justify-center mt-1">
+              <button
+                onClick={() => navigate('/farmer')}
+                className="bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 text-[11px] font-extrabold px-3 py-0.5 rounded-full shadow-2xs inline-flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Hero AI</span>
+                <ChevronRight className="w-3 h-3 text-emerald-600" />
+              </button>
+            </div>
           </div>
         </div>
+      </nav>
 
-        {/* Settings Button */}
-        <NavLink
-          to="/farmer/profile"
-          className={({ isActive }) => `
-            flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all
-            ${isActive 
-              ? 'bg-[#16A34A] text-white' 
-              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }
-          `}
+      {/* Bottom Section: Logout */}
+      <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex-shrink-0">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 group cursor-pointer"
         >
-          <Settings className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-          <span>Settings</span>
-        </NavLink>
-
+          <LogOut className="w-4 h-4 text-red-500 dark:text-red-400 group-hover:scale-110 transition-transform" />
+          <span>Logout</span>
+        </button>
       </div>
 
     </aside>

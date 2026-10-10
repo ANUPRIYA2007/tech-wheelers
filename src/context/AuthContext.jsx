@@ -12,20 +12,21 @@ export function AuthProvider({ children }) {
   const fetchProfile = useCallback(async (userId) => {
     try {
       const { data, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*, farmers(*)')
-        .eq('id', userId)
-        .single();
+        .from('farmers')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
 
       if (fetchError) {
-        // If profiles table doesn't exist yet (during setup), use basic user data
-        if (fetchError.code === '42P01' || fetchError.message?.includes('relation')) {
-          setProfile({ id: userId, role: 'farmer' });
-          return;
-        }
-        throw fetchError;
+        console.warn('fetchProfile warning:', fetchError.message);
+        setProfile({ id: userId, role: 'farmer' });
+        return;
       }
-      setProfile(data);
+      if (data) {
+        setProfile({ ...data, role: data.role || 'farmer' });
+      } else {
+        setProfile({ id: userId, role: 'farmer' });
+      }
     } catch (err) {
       console.error('Error fetching profile:', err);
       setProfile({ id: userId, role: 'farmer' });
@@ -33,7 +34,6 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -42,7 +42,6 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null);
@@ -58,10 +57,24 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
-  const signUp = async ({ email, password, fullName, phone }) => {
+  /**
+   * signUp — creates auth user then inserts a row into the farmers table.
+   */
+  const signUp = async ({
+    email,
+    password,
+    fullName,
+    phone,
+    village = '',
+    district = '',
+    state = '',
+    pincode = '',
+    government_id_verified = false,
+    proof_type = '',
+  }) => {
     setError(null);
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -69,10 +82,35 @@ export function AuthProvider({ children }) {
         },
       });
       if (signUpError) throw signUpError;
-      return data;
+
+      const userId = authData?.user?.id;
+      if (userId) {
+        const farmerId = `FRM-${Date.now().toString(36).toUpperCase()}`;
+        const { error: insertError } = await supabase
+          .from('farmers')
+          .insert([{
+            user_id: userId,
+            farmer_id: farmerId,
+            full_name: fullName,
+            phone,
+            village,
+            district,
+            state,
+            role: 'farmer',
+            is_verified: government_id_verified,
+          }]);
+        if (insertError) {
+          console.warn('Farmer row insert warning:', insertError.message);
+        }
+      }
+
+      return authData;
     } catch (err) {
-      setError(err.message);
-      throw err;
+      const msg = err.message?.includes('Failed to fetch')
+        ? 'Cannot reach the server. Please check your internet connection and try again.'
+        : err.message || 'Registration failed. Please try again.';
+      setError(msg);
+      throw new Error(msg);
     }
   };
 
@@ -86,8 +124,11 @@ export function AuthProvider({ children }) {
       if (signInError) throw signInError;
       return data;
     } catch (err) {
-      setError(err.message);
-      throw err;
+      const msg = err.message?.includes('Failed to fetch')
+        ? 'Cannot reach the server. Please check your internet connection and try again.'
+        : err.message || 'Login failed. Please try again.';
+      setError(msg);
+      throw new Error(msg);
     }
   };
 

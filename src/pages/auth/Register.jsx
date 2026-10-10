@@ -5,7 +5,8 @@ import { useLanguage } from '../../context/LanguageContext';
 import { gsap } from 'gsap';
 import { 
   Sprout, Eye, EyeOff, ChevronLeft, ChevronRight, Check, Bot, 
-  ShieldCheck, MapPin, Upload, AlertCircle, RefreshCw, Sparkles, ArrowLeft 
+  ShieldCheck, UploadCloud, AlertCircle, RefreshCw, Sparkles, ArrowLeft,
+  X, FileText, Lock
 } from 'lucide-react';
 import Button from '../../components/common/Button';
 import LanguageSelector from '../../components/common/LanguageSelector';
@@ -27,8 +28,12 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [aadhaarError, setAadhaarError] = useState('');
+  const [fileError, setFileError] = useState('');
+  const [dragActive, setDragActive] = useState(false);
   const formRef = useRef(null);
   const heroSpeechRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Form State
   const [form, setForm] = useState({
@@ -37,8 +42,9 @@ export default function Register() {
     password: '',
     confirmPassword: '',
     proofType: 'Aadhaar',
-    proofRef: '',
+    aadhaarNumber: '', // raw digits — never logged or stored to localStorage
     proofFile: null,
+    proofFileName: '',
     proofVerified: false,
     proofStatus: 'NOT_SUBMITTED', // NOT_SUBMITTED, VERIFYING, VERIFIED, FAILED
     state: 'Tamil Nadu',
@@ -160,21 +166,66 @@ export default function Register() {
 
   const prevStep = () => setStep(prev => Math.max(prev - 1, 0));
 
-  // Government Verification Flow
-  const handleVerifyProof = () => {
-    if (!form.proofRef.trim() && !form.proofFile) {
-      setError('Please enter a document reference number or upload a document.');
+  // Aadhaar number handler — only digits, max 12, never logged
+  const handleAadhaarChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
+    setForm(prev => ({ ...prev, aadhaarNumber: digits, proofStatus: 'NOT_SUBMITTED', proofVerified: false }));
+    setAadhaarError(digits.length > 0 && digits.length < 12 ? 'Aadhaar number must be exactly 12 digits.' : '');
+    setError('');
+  };
+
+  // Masked display: XXXX XXXX 1234
+  const maskedAadhaar = (num) => {
+    if (!num || num.length < 4) return num;
+    return `XXXX XXXX ${num.slice(-4)}`;
+  };
+
+  // File validation
+  const handleFileSelect = (file) => {
+    setFileError('');
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (!allowed.includes(file.type)) {
+      setFileError('Unsupported file type. Please upload JPG, PNG, or PDF.');
       return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      setFileError('File size exceeds 5 MB. Please upload a smaller file.');
+      return;
+    }
+    setForm(prev => ({ ...prev, proofFile: file, proofFileName: file.name, proofStatus: 'NOT_SUBMITTED', proofVerified: false }));
+    setError('');
+  };
 
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    handleFileSelect(file);
+  };
+
+  const removeFile = () => {
+    setForm(prev => ({ ...prev, proofFile: null, proofFileName: '', proofStatus: 'NOT_SUBMITTED', proofVerified: false }));
+    setFileError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Verify Proof enabled only when Aadhaar is 12 digits AND file uploaded
+  const canVerify = form.aadhaarNumber.length === 12 && !!form.proofFile && !fileError;
+
+  // Government Verification Flow
+  const handleVerifyProof = () => {
+    if (!canVerify) {
+      setError('Please enter a valid 12-digit Aadhaar number and upload a document.');
+      return;
+    }
     setForm(prev => ({ ...prev, proofStatus: 'VERIFYING' }));
     setError('');
-
-    // Mock/Sandbox server-side verification delay
+    // Simulated secure verification — replace with real backend call
     setTimeout(() => {
       setForm(prev => ({ ...prev, proofStatus: 'VERIFIED', proofVerified: true }));
       setHeroMessage(t('proofVerifiedSuccess', '✓ Government document verified successfully!'));
-    }, 1200);
+    }, 1400);
   };
 
   // Final Registration Submission
@@ -376,72 +427,161 @@ export default function Register() {
 
             {/* STEP 1: Government Proof Verification */}
             {step === 1 && (
-              <div className="space-y-4">
-                <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2.5">
-                  <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                  <span>Select a government identity document to verify your farmer profile securely.</span>
+              <div className="space-y-5">
+
+                {/* Heading + subtitle */}
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">Government Proof Verification</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Verify your government identity document securely to continue registration.</p>
                 </div>
 
+                {/* 1. Select Proof Type */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Select Proof Type *</label>
                   <select
                     id="proofType"
                     value={form.proofType}
-                    onChange={e => updateField('proofType', e.target.value)}
+                    onChange={e => { updateField('proofType', e.target.value); setForm(prev => ({ ...prev, proofStatus: 'NOT_SUBMITTED', proofVerified: false })); }}
                     className={inputClass}
                   >
                     <option value="Aadhaar">Aadhaar Card</option>
-                    <option value="Voter ID">Voter ID Card</option>
-                    <option value="Driving Licence">Driving Licence</option>
-                    <option value="Kisan Credit Card">Kisan Credit Card (KCC)</option>
-                    <option value="Ration Card">Ration Card</option>
                   </select>
                 </div>
 
+                {/* 2. Aadhaar Number */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Document Reference Number *</label>
-                  <input
-                    id="proofRef"
-                    type="text"
-                    value={form.proofRef}
-                    onChange={e => updateField('proofRef', e.target.value)}
-                    placeholder="Enter document reference / ID number"
-                    className={inputClass}
-                  />
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Aadhaar Number *</label>
+                  {form.proofStatus === 'VERIFIED' ? (
+                    <div className={`${inputClass} text-slate-600 dark:text-slate-300 tracking-widest font-mono`}>
+                      {maskedAadhaar(form.aadhaarNumber)}
+                    </div>
+                  ) : (
+                    <input
+                      id="aadhaarNumber"
+                      type="text"
+                      inputMode="numeric"
+                      value={form.aadhaarNumber}
+                      onChange={handleAadhaarChange}
+                      placeholder="Enter 12 digit Aadhaar number"
+                      maxLength={12}
+                      autoComplete="off"
+                      className={`${inputClass} tracking-widest font-mono ${aadhaarError ? 'border-red-400 focus:ring-red-400' : ''}`}
+                    />
+                  )}
+                  {aadhaarError && (
+                    <p className="mt-1 text-[11px] text-red-600 dark:text-red-400 font-semibold flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />{aadhaarError}
+                    </p>
+                  )}
+                  {form.aadhaarNumber.length === 12 && !aadhaarError && form.proofStatus !== 'VERIFIED' && (
+                    <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">✓ 12 digits entered</p>
+                  )}
                 </div>
 
-                {/* Verification Action Box */}
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-surface-800 border border-slate-200 dark:border-surface-700 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div>
-                    <span className="text-xs text-slate-500 font-medium block">Verification Status:</span>
-                    {form.proofStatus === 'VERIFIED' && (
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600">
-                        <Check className="w-4 h-4" /> Verified Successfully
+                {/* 3. Document Upload */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Upload Government Proof *</label>
+
+                  {!form.proofFile ? (
+                    <div
+                      onDragEnter={e => { e.preventDefault(); setDragActive(true); }}
+                      onDragOver={e => { e.preventDefault(); setDragActive(true); }}
+                      onDragLeave={e => { e.preventDefault(); setDragActive(false); }}
+                      onDrop={handleDrop}
+                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer ${
+                        dragActive
+                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
+                          : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-surface-800 hover:border-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/10'
+                      }`}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <UploadCloud className={`w-8 h-8 mx-auto mb-2 ${ dragActive ? 'text-emerald-500' : 'text-slate-400'}`} />
+                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Drag and drop your Aadhaar document here</p>
+                      <p className="text-xs text-slate-400 my-1.5">or</p>
+                      <span className="inline-block px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold shadow-sm hover:bg-emerald-700 transition-colors">
+                        Choose File
                       </span>
+                      <p className="mt-3 text-[11px] text-slate-400">Supported formats: JPG, PNG, PDF &nbsp;·&nbsp; Maximum size: 5 MB</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">{form.proofFileName}</span>
+                        <span className="text-[11px] text-emerald-600 font-bold flex-shrink-0">✓ Uploaded</span>
+                      </div>
+                      {form.proofStatus !== 'VERIFIED' && (
+                        <button type="button" onClick={removeFile} className="ml-2 p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,application/pdf"
+                    className="hidden"
+                    onChange={e => handleFileSelect(e.target.files?.[0])}
+                  />
+
+                  {fileError && (
+                    <p className="mt-1.5 text-[11px] text-red-600 dark:text-red-400 font-semibold flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />{fileError}
+                    </p>
+                  )}
+                </div>
+
+                {/* 4. Compact Verification Status */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-surface-800 border border-slate-200 dark:border-surface-700">
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-medium block mb-0.5">Verification Status:</span>
+                    {form.proofStatus === 'NOT_SUBMITTED' && !canVerify && (
+                      <span className="text-xs font-bold text-slate-400">Not Submitted</span>
+                    )}
+                    {form.proofStatus === 'NOT_SUBMITTED' && canVerify && (
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">Ready for Verification</span>
                     )}
                     {form.proofStatus === 'VERIFYING' && (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600">
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Verifying...
                       </span>
                     )}
-                    {form.proofStatus === 'NOT_SUBMITTED' && (
-                      <span className="text-xs font-bold text-slate-400">Not Submitted</span>
+                    {form.proofStatus === 'VERIFIED' && (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600">
+                        <Check className="w-3.5 h-3.5" /> Verified
+                      </span>
+                    )}
+                    {form.proofStatus === 'FAILED' && (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-red-600">
+                        <AlertCircle className="w-3.5 h-3.5" /> Verification Failed
+                      </span>
                     )}
                   </div>
 
                   <Button
                     type="button"
                     onClick={handleVerifyProof}
-                    disabled={form.proofStatus === 'VERIFIED' || form.proofStatus === 'VERIFYING'}
-                    className={`text-xs px-4 py-2 ${
+                    disabled={!canVerify || form.proofStatus === 'VERIFIED' || form.proofStatus === 'VERIFYING'}
+                    className={`text-xs px-4 py-2 flex-shrink-0 ${
                       form.proofStatus === 'VERIFIED'
                         ? 'bg-emerald-600 text-white'
-                        : 'bg-slate-900 text-white hover:bg-slate-800'
+                        : !canVerify || form.proofStatus === 'VERIFYING'
+                          ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                          : 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800'
                     }`}
                   >
                     {form.proofStatus === 'VERIFIED' ? 'Verified ✓' : 'Verify Proof'}
                   </Button>
                 </div>
+
+                {/* 5. Security note */}
+                <p className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                  <Lock className="w-3 h-3 flex-shrink-0" />
+                  Your government proof information is securely handled and protected.
+                </p>
+
               </div>
             )}
 

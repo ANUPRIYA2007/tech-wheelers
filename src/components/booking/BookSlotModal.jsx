@@ -76,7 +76,11 @@ export default function BookSlotModal({ isOpen, onClose, onSuccess }) {
     setErrorMessage(null);
 
     try {
-      const result = await bookSlot(selectedSlot.id);
+      const result = await bookSlot(selectedSlot.id, {
+        centreObj: selectedCentre,
+        selectedSlot,
+        selectedDate
+      });
       if (result.success) {
         setBookingResult(result.data);
         setStep(4); // Success step
