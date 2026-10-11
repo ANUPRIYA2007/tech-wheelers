@@ -5,6 +5,9 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   assetsInclude: ['**/*.glb', '**/*.gltf'],
+  optimizeDeps: {
+    include: ['react-is', 'recharts'],
+  },
   server: {
     host: true,
     port: 5173,

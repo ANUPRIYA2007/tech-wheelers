@@ -10,21 +10,23 @@ import {
 export default function MyQueue() {
   const { t } = useLanguage();
   const { activeBooking, loading: bookingLoading } = useMyBookings();
-  const centreId = activeBooking?.centre_id || 'dpc-vanur-01';
+  const centreId = activeBooking?.centre_id || null;
   const { queue: liveCentreQueue, loading: queueLoading } = useLiveQueue(centreId);
 
   // ── 1. DYNAMIC & REAL-TIME QUEUE CALCULATIONS ─────────────────────────────
-  const farmerToken = activeBooking?.token_number || '#102';
-  const centreName = activeBooking?.centre_name || 'Vanur Government Direct Procurement Centre';
-  const slotDate = activeBooking?.slot_date || new Date().toISOString().split('T')[0];
-  const startTime = activeBooking?.start_time || '09:00 AM';
-  const endTime = activeBooking?.end_time || '10:00 AM';
-  const bookingStatus = activeBooking?.booking_status || 'CONFIRMED';
+  const hasBooking = Boolean(activeBooking);
+  const farmerToken = activeBooking?.token_number || null;
+  const centreName = activeBooking?.centre_name || null;
+  const slotDate = activeBooking?.slot_date || null;
+  const startTime = activeBooking?.start_time || null;
+  const endTime = activeBooking?.end_time || null;
+  const bookingStatus = activeBooking?.booking_status || null;
 
   // Parse numeric token values
   const farmerNum = useMemo(() => {
+    if (!farmerToken) return 0;
     const match = farmerToken.match(/\d+/);
-    return match ? parseInt(match[0], 10) : 102;
+    return match ? parseInt(match[0], 10) : 0;
   }, [farmerToken]);
 
   // Determine current serving token
@@ -167,7 +169,7 @@ export default function MyQueue() {
             message,
             type: 'queue',
             isRead: false,
-            createdAt: 'Just now'
+            createdAt: new Date().toISOString()
           };
           localStorage.setItem('crop_dairy_farmer_notifications', JSON.stringify([newNotif, ...existing]));
           window.dispatchEvent(new Event('notification_added'));
@@ -175,6 +177,42 @@ export default function MyQueue() {
       }
     }
   }, [farmerToken, farmersAhead, isFarmerServing, isCompleted, isCancelled]);
+
+  if (bookingLoading || queueLoading) {
+    return (
+      <div className="max-w-4xl mx-auto py-16 text-center space-y-3">
+        <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mx-auto" />
+        <p className="text-xs text-slate-500 font-medium">Loading your queue status...</p>
+      </div>
+    );
+  }
+
+  if (!hasBooking) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-5 text-slate-800 dark:text-slate-100 font-sans pb-10">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              <Users className="w-6 h-6 text-emerald-600" />
+              Queue Status
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Live real-time tracking for your procurement slot</p>
+          </div>
+        </div>
+        <div className="py-16 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-8 space-y-4">
+          <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center mx-auto">
+            <Users className="w-8 h-8" />
+          </div>
+          <div>
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">No Active Queue Token</h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              You don't have an active slot booking. Book a procurement slot to receive your queue token and track your position in real-time.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-5 text-slate-800 dark:text-slate-100 font-sans pb-10 animate-fade-in">

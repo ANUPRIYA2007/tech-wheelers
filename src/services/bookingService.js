@@ -76,18 +76,6 @@ const MOCK_CENTRES = [
   }
 ];
 
-const MOCK_BOOKING_DEFAULT = {
-  booking_id: 'bk-demo-102',
-  slot_id: 's001',
-  token_number: '#102',
-  centre_name: 'Vanur Government Direct Procurement Centre (DPC)',
-  centre_location: 'Vanur, Tamil Nadu',
-  slot_date: new Date().toISOString().split('T')[0],
-  start_time: '10:30 AM',
-  end_time: '11:00 AM',
-  booking_status: 'CONFIRMED'
-};
-
 /**
  * ── REALTIME TOKEN ENGINE ──────────────────────────────────────────────────
  * Generates guaranteed collision-free sequential token numbers per centre & date
@@ -95,8 +83,22 @@ const MOCK_BOOKING_DEFAULT = {
 export function generateUniqueToken(centreId = 'DPC-VNR', slotDate = new Date().toISOString().split('T')[0]) {
   const dateKey = slotDate.replace(/-/g, '');
   const seqKey = `crop_dairy_token_seq_${centreId}_${dateKey}`;
-  let currentSeq = parseInt(localStorage.getItem(seqKey) || '101', 10);
-  currentSeq += 1;
+  
+  // Find highest existing token number across stored bookings to avoid collisions
+  let maxNum = 100;
+  const existingList = getStoredBookings();
+  existingList.forEach(b => {
+    if (b.token_number) {
+      const match = b.token_number.match(/\d+/);
+      if (match) {
+        const num = parseInt(match[0], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    }
+  });
+
+  const storedSeq = parseInt(localStorage.getItem(seqKey) || '0', 10);
+  const currentSeq = Math.max(storedSeq, maxNum) + 1;
   localStorage.setItem(seqKey, currentSeq.toString());
 
   const cleanCentreCode = (centreId.split('-')[1] || centreId.slice(0, 4)).toUpperCase();
@@ -210,6 +212,7 @@ export async function getAvailableSlots(centreId, dateStr) {
  */
 export async function getMyBookings() {
   try {
+    let dbBookings = [];
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user?.id) {
@@ -228,34 +231,37 @@ export async function getMyBookings() {
         .order('created_at', { ascending: false });
 
       if (!bErr && bookings && bookings.length > 0) {
-        return bookings.map(b => ({
+        dbBookings = bookings.map(b => ({
           booking_id: b.id,
           slot_id: b.slot_id,
           centre_id: b.centre_id,
-          token_number: b.token_number || '#102',
+          token_number: b.token_number || '#101',
           token_status: b.token_status || 'WAITING',
           queue_position: b.queue_position || 1,
           estimated_time: b.estimated_time || '15 mins',
           centre_name: b.centre_name || 'Government Procurement Centre',
           centre_location: b.centre_location || 'Tamil Nadu',
           slot_date: b.slot_date,
-          start_time: b.start_time || '10:30 AM',
-          end_time: b.end_time || '11:00 AM',
+          start_time: b.start_time || '09:00 AM',
+          end_time: b.end_time || '09:30 AM',
           booking_status: b.booking_status
         }));
       }
     }
 
     const localList = getStoredBookings();
-    if (localList.length > 0) {
-      return localList;
-    }
+    const map = new Map();
+    dbBookings.forEach(b => map.set(b.booking_id, b));
+    localList.forEach(b => {
+      if (!map.has(b.booking_id)) {
+        map.set(b.booking_id, b);
+      }
+    });
 
-    return [MOCK_BOOKING_DEFAULT];
+    return Array.from(map.values());
   } catch (err) {
     console.warn('Using local booking state fallback:', err);
-    const localList = getStoredBookings();
-    return localList.length > 0 ? localList : [MOCK_BOOKING_DEFAULT];
+    return getStoredBookings();
   }
 }
 
@@ -263,8 +269,12 @@ export async function getMyBookings() {
 function getStoredBookings() {
   try {
     const listStr = localStorage.getItem('crop_dairy_all_bookings');
-    if (listStr) return JSON.parse(listStr);
-  } catch (e) {}
+    if (listStr !== null) {
+      return JSON.parse(listStr);
+    }
+  } catch (e) {
+    console.error('Error reading stored bookings:', e);
+  }
   return [];
 }
 
@@ -454,9 +464,15 @@ export async function bookSlot(slotId, { centreObj, selectedSlot, selectedDate }
  */
 export async function cancelSlot(bookingId) {
   try {
-    const { data, error } = await supabase.rpc('cancel_procurement_slot', {
-      p_booking_id: bookingId
-    });
+    try {
+      await supabase.from('slot_bookings').update({ booking_status: 'CANCELLED' }).eq('id', bookingId);
+      await supabase.from('queue_tokens').update({ token_status: 'CANCELLED', status: 'CANCELLED' }).eq('booking_id', bookingId);
+      await supabase.rpc('cancel_procurement_slot', {
+        p_booking_id: bookingId
+      });
+    } catch (e) {
+      // RPC fallback for local mode
+    }
 
     let list = getStoredBookings();
     const target = list.find(b => b.booking_id === bookingId);
@@ -506,6 +522,16 @@ export async function rescheduleSlot(bookingId, newSlotId) {
  */
 export async function deleteBooking(bookingId) {
   try {
+    try {
+      await supabase.from('queue_tokens').delete().eq('booking_id', bookingId);
+      await supabase.from('slot_bookings').delete().eq('id', bookingId);
+      await supabase.rpc('delete_cancelled_booking', {
+        p_booking_id: bookingId
+      });
+    } catch (e) {
+      // RPC fallback if DB function is not created yet
+    }
+
     let list = getStoredBookings();
     list = list.filter(b => b.booking_id !== bookingId);
     localStorage.setItem('crop_dairy_all_bookings', JSON.stringify(list));

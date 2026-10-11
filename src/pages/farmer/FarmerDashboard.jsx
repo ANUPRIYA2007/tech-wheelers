@@ -63,16 +63,7 @@ export default function FarmerDashboard() {
     rec.onend = () => setIsListening(false);
   };
 
-  // Active booking display details
-  const displayBooking = activeBooking || {
-    token_number: '#120',
-    booking_status: 'CONFIRMED',
-    slot_date: '2026-09-24',
-    start_time: '02:00 PM',
-    end_time: '02:30 PM',
-    centre_name: 'Government Procurement Centre - Main DPC',
-    centre_location: 'Thanjavur, Tamil Nadu',
-  };
+  // Only use the real active booking — no hardcoded fallback
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto text-slate-800 dark:text-slate-100 font-sans pb-8 select-none">
@@ -238,7 +229,7 @@ export default function FarmerDashboard() {
                 <div className="w-8 h-8 rounded-full border-2 border-[#16A34A] border-t-transparent animate-spin mx-auto" />
                 <p className="text-xs text-slate-500 font-medium">Fetching active slot...</p>
               </div>
-            ) : activeBooking || displayBooking ? (
+            ) : activeBooking ? (
               /* Active Booking Content */
               <div className="mt-4 space-y-3 text-xs">
                 
@@ -249,7 +240,7 @@ export default function FarmerDashboard() {
                     CONFIRMED
                   </span>
                   <span className="px-3.5 py-1 rounded-xl bg-[#DCFCE7] text-emerald-900 text-lg font-black font-mono tracking-tight">
-                    {displayBooking.token_number || '#120'}
+                    {activeBooking.token_number}
                   </span>
                 </div>
 
@@ -261,7 +252,7 @@ export default function FarmerDashboard() {
                       Date
                     </span>
                     <span className="font-extrabold text-slate-900 dark:text-white">
-                      {displayBooking.slot_date}
+                      {activeBooking.slot_date}
                     </span>
                   </div>
 
@@ -271,7 +262,7 @@ export default function FarmerDashboard() {
                       Time
                     </span>
                     <span className="font-extrabold text-slate-900 dark:text-white">
-                      {displayBooking.start_time ? `${displayBooking.start_time} - ${displayBooking.end_time || '02:30 PM'}` : '02:00 PM - 02:30 PM'}
+                      {activeBooking.start_time} - {activeBooking.end_time}
                     </span>
                   </div>
 
@@ -281,7 +272,7 @@ export default function FarmerDashboard() {
                       Centre
                     </span>
                     <span className="font-extrabold text-slate-900 dark:text-white text-right max-w-[220px] truncate">
-                      {displayBooking.centre_name || 'Government Procurement Centre - Main DPC'}
+                      {activeBooking.centre_name}
                     </span>
                   </div>
                 </div>
@@ -416,8 +407,8 @@ export default function FarmerDashboard() {
 
       {/* 4. MY PROCUREMENT CENTRE (Full-width Card at Bottom) */}
       <ProcurementRouteMap
-        currentToken={activeBooking?.token_number || '#101'}
-        yourToken={activeBooking?.token_number || '#102'}
+        currentToken={activeBooking?.token_number || null}
+        yourToken={activeBooking?.token_number || null}
       />
 
       {/* 5. BOOK SLOT MODAL */}

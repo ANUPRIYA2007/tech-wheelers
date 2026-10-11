@@ -9,7 +9,11 @@ export function useLiveQueue(centreId) {
   const [callingNext, setCallingNext] = useState(false);
 
   const fetchQueue = useCallback(async () => {
-    if (!centreId) return;
+    if (!centreId) {
+      setLoading(false);
+      setQueue([]);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

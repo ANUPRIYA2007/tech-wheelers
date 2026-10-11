@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   Sprout, Home, CalendarCheck, Users, Package, CreditCard,
-  Bell, ChevronRight, LogOut
+  ChevronRight, LogOut
 } from 'lucide-react';
 import HeroModel from '../hero/HeroModel';
 
@@ -14,7 +14,6 @@ const NAV_ITEMS = [
   { path: '/farmer/queue', icon: Users, label: 'My Queue' },
   { path: '/farmer/procurement', icon: Package, label: 'Procurement Status' },
   { path: '/farmer/payments', icon: CreditCard, label: 'Payment' },
-  { path: '/farmer/notifications', icon: Bell, label: 'Notifications', badge: '2' },
 ];
 
 export default function Sidebar() {
@@ -77,17 +76,10 @@ export default function Sidebar() {
             `}
           >
             {({ isActive }) => (
-              <>
-                <div className="flex items-center gap-3">
-                  <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
-                  <span>{t(item.label.toLowerCase()) || item.label}</span>
-                </div>
-                {item.badge && (
-                  <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center shadow-2xs">
-                    {item.badge}
-                  </span>
-                )}
-              </>
+              <div className="flex items-center gap-3">
+                <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                <span>{t(item.label.toLowerCase()) || item.label}</span>
+              </div>
             )}
           </NavLink>
         ))}

@@ -56,7 +56,7 @@ export function useMyBookings() {
 
   return {
     bookings,
-    activeBooking: bookings.find(b => b.booking_status === 'CONFIRMED') || bookings[0] || null,
+    activeBooking: bookings.find(b => b.booking_status === 'CONFIRMED') || null,
     loading,
     error,
     refreshBookings: fetchBookings

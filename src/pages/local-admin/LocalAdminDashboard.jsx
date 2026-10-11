@@ -67,11 +67,11 @@ export default function LocalAdminDashboard() {
     const totalPayout = queue.filter(q => q.paidAmount).reduce((acc, q) => acc + q.paidAmount, 0) + (completed * 110000);
     return {
       todayFarmers: queue.length,
-      currentToken: activeToken?.id || '#TK-101',
+      currentToken: activeToken?.id || null,
       waitingCount: waiting,
       totalTonnageQtl: totalTonnage.toFixed(1),
-      totalPayoutToday: totalPayout || 406453,
-      avgWaitMins: 6.5
+      totalPayoutToday: totalPayout,
+      avgWaitMins: queue.length > 0 ? parseFloat((queue.reduce((a, q) => a + (q.waitMins || 0), 0) / queue.length).toFixed(1)) : 0
     };
   }, [queue, activeToken]);
 
@@ -194,7 +194,7 @@ export default function LocalAdminDashboard() {
               <CreditCard className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 mt-2">₹{metrics.totalPayoutToday.toLocaleString('en-IN')}</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-900 mt-2">₹{(metrics.totalPayoutToday || 0).toLocaleString('en-IN')}</p>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
