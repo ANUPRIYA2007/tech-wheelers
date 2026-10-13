@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
+import { supabase, supabaseAdmin } from '../../services/supabase';
+const dbClient = supabaseAdmin || supabase;
 import { 
   Users, 
   Hash, 
@@ -19,7 +21,8 @@ import {
   ShieldCheck,
   Zap,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  RefreshCw
 } from 'lucide-react';
 
 import useLiveQueue from '../../hooks/useLiveQueue';
@@ -35,21 +38,32 @@ export default function LocalAdminDashboard() {
 
   const queue = dbQueue || [];
 
-  // Active Processing Inspection Desk State
   const [activeTokenState, setActiveTokenState] = useState(null);
-  const activeToken = activeTokenState || queue[0] || null;
+  const activeToken = activeTokenState || queue.find(q => q.status === 'CALLED' || q.status === 'SERVING') || queue[0] || null;
 
-  const [moisturePct, setMoisturePct] = useState(15.2);
-  const [impurityPct, setImpurityPct] = useState(1.2);
-  const [grossWeightQtl, setGrossWeightQtl] = useState(55.0);
-  const [tareWeightQtl, setTareWeightQtl] = useState(2.6);
+  const [moisturePct, setMoisturePct] = useState(14.0);
+  const [impurityPct, setImpurityPct] = useState(0.5);
+  const [grossWeightQtl, setGrossWeightQtl] = useState(25.0);
+  const [tareWeightQtl, setTareWeightQtl] = useState(0.5);
   const [mspRate, setMspRate] = useState(2203);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [noticeMessage, setNoticeMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Reset inspection fields when the active token changes
+  useEffect(() => {
+    if (activeToken) {
+      setMoisturePct(14.0);
+      setImpurityPct(0.5);
+      setGrossWeightQtl(25.0);
+      setTareWeightQtl(0.5);
+    }
+  }, [activeToken?.tokenId]);
 
   // Calculations
   const netWeightQtl = useMemo(() => {
+    if (grossWeightQtl <= 0) return 0;
     const val = grossWeightQtl - tareWeightQtl;
     return val > 0 ? parseFloat(val.toFixed(2)) : 0;
   }, [grossWeightQtl, tareWeightQtl]);
@@ -62,18 +76,18 @@ export default function LocalAdminDashboard() {
   // Derived Metrics
   const metrics = useMemo(() => {
     const waiting = queue.filter(q => q.status === 'WAITING').length;
+    const called = queue.filter(q => q.status === 'CALLED' || q.status === 'SERVING').length;
     const completed = queue.filter(q => q.status === 'COMPLETED').length;
-    const totalTonnage = queue.reduce((acc, q) => acc + (q.estWeightQtl || 0), 0);
-    const totalPayout = queue.filter(q => q.paidAmount).reduce((acc, q) => acc + q.paidAmount, 0) + (completed * 110000);
+    const totalWaitMins = queue.reduce((acc, q) => acc + (q.waitMins || 0), 0);
     return {
       todayFarmers: queue.length,
-      currentToken: activeToken?.id || null,
+      currentToken: queue.find(q => q.status === 'CALLED' || q.status === 'SERVING')?.id || null,
       waitingCount: waiting,
-      totalTonnageQtl: totalTonnage.toFixed(1),
-      totalPayoutToday: totalPayout,
-      avgWaitMins: queue.length > 0 ? parseFloat((queue.reduce((a, q) => a + (q.waitMins || 0), 0) / queue.length).toFixed(1)) : 0
+      calledCount: called,
+      completedCount: completed,
+      avgWaitMins: queue.length > 0 ? parseFloat((totalWaitMins / queue.length).toFixed(1)) : 0
     };
-  }, [queue, activeToken]);
+  }, [queue]);
 
   // Filtered Queue
   const filteredQueue = useMemo(() => {
@@ -93,14 +107,51 @@ export default function LocalAdminDashboard() {
     }
 
     const res = await callNext(1);
-    if (res && res.success) {
-      setNoticeMessage(`✅ Called Token ${res.token_number} to Counter 1.`);
+    
+    // Use result from RPC (which is always atomic and correct)
+    const calledToken = res?.token_number || res?.tokenNumber;
+    const calledFarmerId = res?.farmer_id;
+    const calledCounter = res?.counter_number || 1;
+
+    if (res && res.success !== false) {
+      setNoticeMessage(`✅ Called Token ${calledToken || ''} to Counter ${calledCounter}.`);
       setTimeout(() => setNoticeMessage(''), 3500);
+
+      // INSERT real notification into the notifications table for the specific farmer
+      if (calledFarmerId) {
+        try {
+          const counterText = calledCounter ? `Counter ${calledCounter}` : 'the procurement counter';
+          await supabase.from('notifications').insert({
+            farmer_id: calledFarmerId,
+            title: '🔔 Your Turn Has Arrived!',
+            message: `Token ${calledToken} has been called. Please proceed to ${counterText} immediately.`,
+            type: 'queue',
+            is_read: false,
+          });
+        } catch (notifErr) {
+          console.error('Failed to insert token-called notification:', notifErr);
+        }
+      }
     } else {
+      // Fallback: try manual update on the next WAITING token
       const nextWaiting = queue.find(q => q.status === 'WAITING');
       if (nextWaiting) {
         if (nextWaiting.tokenId) {
           await updateStatus(nextWaiting.tokenId, 'CALLED', 1);
+          // Also notify the farmer
+          if (nextWaiting.farmer_id) {
+            try {
+              await supabase.from('notifications').insert({
+                farmer_id: nextWaiting.farmer_id,
+                title: '🔔 Your Turn Has Arrived!',
+                message: `Token ${nextWaiting.id} has been called. Please proceed to Counter 1 immediately.`,
+                type: 'queue',
+                is_read: false,
+              });
+            } catch (notifErr) {
+              console.error('Failed to insert notification (fallback):', notifErr);
+            }
+          }
         }
         setActiveTokenState({ ...nextWaiting, status: 'CALLED' });
         setNoticeMessage(`✅ Called Token ${nextWaiting.id} (${nextWaiting.name}) to Counter 1.`);
@@ -112,21 +163,155 @@ export default function LocalAdminDashboard() {
     }
   };
 
-  // Action: Approve Inspection & Status Update
+  // Action: Approve Inspection & Save to Supabase (procurement + payment + notification)
   const handleApproveInspection = async () => {
     if (!activeToken) return;
+    if (isSaving) return;
+    setIsSaving(true);
 
-    if (activeToken.tokenId) {
-      await updateStatus(activeToken.tokenId, 'COMPLETED');
+    try {
+      // 1. Mark token as COMPLETED
+      if (activeToken.tokenId) {
+        await updateStatus(activeToken.tokenId, 'COMPLETED');
+      }
+
+      // 2. Determine quality grade
+      const qualityGrade = moisturePct <= 17.0 ? 'Grade A' : 'Grade B';
+      const netWeight = parseFloat(netWeightQtl.toFixed(2));
+      const payout = calculatedPayout;
+
+      let targetFarmerId = activeToken.farmer_id || null;
+      if (!targetFarmerId) {
+        try {
+          const { data: fRow } = await supabase.from('farmers').select('id').limit(1).maybeSingle();
+          targetFarmerId = fRow?.id || null;
+        } catch (e) {}
+      }
+
+      // 3. INSERT into procurements table
+      let procId = null;
+      try {
+        const procPayload = {
+          token_number: activeToken.id,
+          farmer_id: targetFarmerId,
+          centre_id: activeToken.centre_id || centreId,
+          crop_type: activeToken.crop || 'Paddy',
+          moisture_percentage: moisturePct,
+          quality_grade: qualityGrade,
+          gross_weight_kg: grossWeightQtl * 100, // qtl → kg
+          tare_weight_kg: tareWeightQtl * 100,
+          net_weight_kg: netWeight * 100,
+          price_per_quintal: mspRate,
+          total_payout: payout,
+          status: 'accepted',
+          verified_by: 'Local Admin',
+        };
+        const { data: procData, error: procErr } = await dbClient
+          .from('procurements')
+          .insert(procPayload)
+          .select('id')
+          .maybeSingle();
+        if (!procErr && procData) procId = procData.id;
+      } catch (procEx) {
+        console.error('Error saving procurement:', procEx);
+      }
+
+      // 4. INSERT into payments table
+      if (payout > 0 && targetFarmerId) {
+        try {
+          await dbClient.from('payments').insert({
+            farmer_id: targetFarmerId,
+            procurement_id: procId,
+            amount: payout,
+            status: 'pending',
+          });
+        } catch (payErr) {
+          console.error('Error saving payment:', payErr);
+        }
+      }
+
+      // 5. INSERT notification for the farmer
+      if (targetFarmerId) {
+        try {
+          await dbClient.from('notifications').insert({
+            farmer_id: targetFarmerId,
+            title: '✅ Produce Accepted — Payment Initiated',
+            message: `Your produce (${activeToken.crop || 'Paddy'}, ${netWeight} qtl, ${qualityGrade}) has been accepted. Payout of ₹${payout.toLocaleString('en-IN')} is now pending DBT transfer.`,
+            type: 'payment',
+            is_read: false,
+          });
+        } catch (notifErr) {
+          console.error('Error sending acceptance notification:', notifErr);
+        }
+      }
+
+      setNoticeMessage(`🎉 Token ${activeToken.id} Approved! ₹${payout.toLocaleString('en-IN')} DBT Transfer Initiated.`);
+      setTimeout(() => setNoticeMessage(''), 4000);
+
+      // Move to next waiting farmer
+      const nextWaiting = queue.find(q => q.status === 'WAITING' && q.tokenId !== activeToken.tokenId);
+      if (nextWaiting) {
+        setActiveTokenState(nextWaiting);
+      } else {
+        setActiveTokenState(null);
+      }
+    } catch (err) {
+      console.error('Approve inspection error:', err);
+      setNoticeMessage('❌ Failed to save inspection. Please try again.');
+      setTimeout(() => setNoticeMessage(''), 3000);
+    } finally {
+      setIsSaving(false);
     }
+  };
 
-    setNoticeMessage(`🎉 Token ${activeToken.id} Approved! ₹${calculatedPayout.toLocaleString('en-IN')} DBT Transfer Dispatched.`);
-    setTimeout(() => setNoticeMessage(''), 4000);
+  // Action: Reject farmer's produce
+  const handleRejectProduce = async () => {
+    if (!activeToken || isSaving) return;
+    setIsSaving(true);
+    try {
+      if (activeToken.tokenId) {
+        await updateStatus(activeToken.tokenId, 'COMPLETED');
+      }
+      // Insert rejection record into procurements
+      try {
+        await dbClient.from('procurements').insert({
+          token_number: activeToken.id,
+          farmer_id: activeToken.farmer_id,
+          centre_id: centreId,
+          crop_type: activeToken.crop || 'Paddy',
+          moisture_percentage: moisturePct,
+          quality_grade: moisturePct <= 17.0 ? 'Grade A' : 'Grade B',
+          gross_weight_kg: grossWeightQtl * 100,
+          tare_weight_kg: tareWeightQtl * 100,
+          net_weight_kg: Math.max(0, grossWeightQtl - tareWeightQtl) * 100,
+          price_per_quintal: mspRate,
+          total_payout: 0,
+          status: 'rejected',
+          verified_by: 'Local Admin',
+        });
+      } catch (e) { console.error('Error saving rejection:', e); }
 
-    const nextWaiting = queue.find(q => q.status === 'WAITING' && q.id !== activeToken.id);
-    if (nextWaiting) {
-      setActiveTokenState(nextWaiting);
-      setGrossWeightQtl(nextWaiting.estWeightQtl || 50.0);
+      // Notify farmer
+      if (activeToken.farmer_id) {
+        try {
+          await dbClient.from('notifications').insert({
+            farmer_id: activeToken.farmer_id,
+            title: '❌ Produce Rejected',
+            message: `Your produce (Token ${activeToken.id}) could not be accepted. Moisture: ${moisturePct}%. Please contact the procurement officer for details.`,
+            type: 'warning',
+            is_read: false,
+          });
+        } catch (e) { console.error('Error sending rejection notification:', e); }
+      }
+
+      setNoticeMessage(`❌ Token ${activeToken.id} rejected. Farmer notified.`);
+      setTimeout(() => setNoticeMessage(''), 4000);
+      const nextWaiting = queue.find(q => q.status === 'WAITING' && q.tokenId !== activeToken.tokenId);
+      setActiveTokenState(nextWaiting || null);
+    } catch (err) {
+      console.error('Reject produce error:', err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -179,22 +364,22 @@ export default function LocalAdminDashboard() {
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-teal-600">TOTAL TONNAGE</span>
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-teal-600">COMPLETED TODAY</span>
             <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
               <Scale className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">{metrics.totalTonnageQtl} <span className="text-xs text-slate-500 font-bold">Qtl</span></p>
+          <p className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">{metrics.completedCount} <span className="text-xs text-slate-500 font-bold">farmers</span></p>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">PAYOUT APPROVED</span>
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">CALLED / SERVING</span>
             <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
               <CreditCard className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 mt-2">₹{(metrics.totalPayoutToday || 0).toLocaleString('en-IN')}</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-900 mt-2">{metrics.calledCount} <span className="text-xs text-slate-500 font-bold">active</span></p>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
@@ -386,14 +571,18 @@ export default function LocalAdminDashboard() {
                 <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
                   Token: {activeToken.id}
                 </span>
-                <span className="text-xs font-bold text-slate-500">
-                  Assigned: {activeToken.counter}
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  activeToken.status === 'CALLED' || activeToken.status === 'SERVING'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {activeToken.counter || activeToken.status}
                 </span>
               </div>
               <p className="text-lg font-black text-slate-900">{activeToken.name}</p>
               <div className="flex items-center justify-between text-xs text-slate-600 font-medium pt-1 border-t border-slate-200/60">
                 <span>Crop: <strong>{activeToken.crop}</strong></span>
-                <span>Est. Bags: <strong>{activeToken.bagCount} Bags</strong></span>
+                <span>Queue Position: <strong>#{activeToken.queue_position}</strong></span>
               </div>
             </div>
           ) : (
@@ -459,10 +648,14 @@ export default function LocalAdminDashboard() {
                 <label className="block text-[10px] font-bold text-slate-500 mb-1">Gross (Qtl)</label>
                 <input
                   type="number"
+                  min="0.1"
                   step="0.1"
                   value={grossWeightQtl}
-                  onChange={(e) => setGrossWeightQtl(parseFloat(e.target.value) || 0)}
-                  className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-900"
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    setGrossWeightQtl(isNaN(v) ? 0 : Math.max(0, v));
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-900 focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -470,17 +663,36 @@ export default function LocalAdminDashboard() {
                 <label className="block text-[10px] font-bold text-slate-500 mb-1">Tare Bag (Qtl)</label>
                 <input
                   type="number"
+                  min="0"
                   step="0.1"
                   value={tareWeightQtl}
-                  onChange={(e) => setTareWeightQtl(parseFloat(e.target.value) || 0)}
-                  className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-900"
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    setTareWeightQtl(isNaN(v) ? 0 : Math.max(0, v));
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-900 focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
-              <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-200 text-center">
+              <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-200 text-center flex flex-col justify-center">
                 <span className="block text-[10px] font-bold text-emerald-700">Net Weight</span>
                 <span className="text-sm font-black text-emerald-800">{netWeightQtl} Qtl</span>
               </div>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1.5 pt-1">
+              <span className="text-[10px] font-bold text-slate-400">Quick Loads:</span>
+              {[10, 25, 50, 100].map(qtl => (
+                <button
+                  key={qtl}
+                  type="button"
+                  onClick={() => { setGrossWeightQtl(qtl); setTareWeightQtl(0.5); }}
+                  className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 text-slate-700 transition-colors cursor-pointer"
+                >
+                  {qtl} Qtl
+                </button>
+              ))}
             </div>
           </div>
 
@@ -497,14 +709,40 @@ export default function LocalAdminDashboard() {
             </div>
           </div>
 
-          {/* Submit Inspection Action Button */}
-          <button
-            onClick={handleApproveInspection}
-            className="w-full py-3.5 px-5 rounded-2xl bg-[#059669] hover:bg-[#047857] text-white font-black text-sm shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
-          >
-            <CheckCircle2 className="w-5 h-5" />
-            <span>Approve & Authorize DBT Payment ✓</span>
-          </button>
+          {/* Validation Notice if Net Weight <= 0 */}
+          {netWeightQtl <= 0 && activeToken && (
+            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold text-center animate-fade-in">
+              ⚠️ Enter Gross Weight higher than Tare Bag to authorize DBT payment.
+            </div>
+          )}
+
+          {/* Inspection Action Buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={handleRejectProduce}
+              disabled={!activeToken || isSaving}
+              className="py-3.5 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-sm border border-rose-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+            >
+              <span>✕ Reject Produce</span>
+            </button>
+            <button
+              onClick={handleApproveInspection}
+              disabled={!activeToken || isSaving || netWeightQtl <= 0}
+              className="py-3.5 px-4 rounded-2xl bg-[#059669] hover:bg-[#047857] text-white font-black text-sm shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isSaving ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Approve & Pay</span>
+                </>
+              )}
+            </button>
+          </div>
 
         </div>
 

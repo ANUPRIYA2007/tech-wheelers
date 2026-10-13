@@ -10,6 +10,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
@@ -20,6 +22,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     params: {
       eventsPerSecond: 10,
     },
+  },
+});
+
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
   },
 });
 

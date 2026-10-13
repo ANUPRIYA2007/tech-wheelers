@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../services/supabase';
 import { 
   Sprout, 
   LayoutDashboard, 
@@ -25,11 +27,63 @@ import HeroChatbot from '../common/HeroChatbot';
 
 export default function LocalAdminLayout() {
   const { t } = useLanguage();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [centreStatus, setCentreStatus] = useState('OPERATIONAL'); // OPERATIONAL | PAUSED | CLOSED
+  const [centreStatus, setCentreStatus] = useState('OPERATIONAL');
   const [isDarkMode, setIsDarkMode] = useState(false);
+  // The centre this admin is assigned to
+  const [centreId, setCentreId] = useState('c0000000-0000-0000-0000-000000000001');
+  const [centreName, setCentreName] = useState('Government Procurement Centre - Main DPC');
+  const [availableCentres, setAvailableCentres] = useState([]);
+
+  // Fetch available centres and resolve admin's assigned centre from database
+  useEffect(() => {
+    async function fetchCentresAndAdmin() {
+      try {
+        const { data: centres } = await supabase
+          .from('procurement_centres')
+          .select('id, name, centre_code')
+          .eq('operating_status', 'OPEN');
+
+        if (centres && centres.length > 0) {
+          setAvailableCentres(centres);
+          const initial = centres.find(c => c.id === 'c0000000-0000-0000-0000-000000000001') || centres[0];
+          setCentreId(initial.id);
+          setCentreName(`${initial.name} (${initial.centre_code})`);
+        }
+
+        if (user?.id) {
+          const { data: farmerRow } = await supabase
+            .from('farmers')
+            .select('id, centre_id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (farmerRow?.centre_id) {
+            setCentreId(farmerRow.centre_id);
+            const found = (centres || []).find(c => c.id === farmerRow.centre_id);
+            if (found) {
+              setCentreName(`${found.name} (${found.centre_code})`);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Could not resolve admin centres:', e);
+      }
+    }
+    fetchCentresAndAdmin();
+  }, [user]);
+
+  const handleCentreChange = (e) => {
+    const selectedId = e.target.value;
+    const found = availableCentres.find(c => c.id === selectedId);
+    if (found) {
+      setCentreId(found.id);
+      setCentreName(`${found.name} (${found.centre_code})`);
+    }
+  };
 
   // Sync dark mode class on document element
   useEffect(() => {
@@ -91,12 +145,26 @@ export default function LocalAdminLayout() {
               <span className="text-slate-500 dark:text-slate-400 font-medium">Centre:</span>
               <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
                 <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-                DPC #104
+                Active
               </span>
             </div>
-            <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">
-              Thanjavur Primary DPC #104
-            </div>
+            {availableCentres.length > 0 ? (
+              <select
+                value={centreId}
+                onChange={handleCentreChange}
+                className="w-full text-[11px] font-bold bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-600 rounded-lg p-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+              >
+                {availableCentres.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">
+                {centreName}
+              </div>
+            )}
 
             {/* Centre Status Indicator Switch */}
             <div className="pt-1 flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/60">
@@ -226,7 +294,7 @@ export default function LocalAdminLayout() {
 
         {/* DASHBOARD CONTENT ROUTE */}
         <main className="flex-1 p-6 pb-20">
-          <Outlet context={{ centreStatus, setCentreStatus, isDarkMode }} />
+          <Outlet context={{ centreStatus, setCentreStatus, isDarkMode, centreId, centreName }} />
         </main>
 
       </div>
